@@ -5,59 +5,110 @@ const tableCellBorder = "1px solid black";
 
 // Carico il CSV
 const loadCSV = event => {
-    const file = event.target.files[0];
-    if (!file) return; // Se vuoto esco
-    const reader = new FileReader();
-    reader.onload = e => {
-        parseCSV(e.target.result || "");
-    };
-    reader.readAsText(file);
-}
+    try {
+        const file = event.target.files[0];
+        if (!file) return; // Se vuoto esco
+        const reader = new FileReader();
+        reader.onload = e => {
+            parseCSV(e.target.result || "");
+        };
+        reader.readAsText(file);
+    } catch (e) {
+        console.error("Errore durante il caricamento del file:", e);
+        return;
+    }
+};
 
 // Faccio il parsing del CSV
 const parseCSV = text => {
-    text = text.replace("\r", ""); // Pulisco i dati sporchi
-    let rows = text.split("\n").map(row => row.split(","));
-    rows.shift(); // Rimuovo header
+    let rows, reference;
+    try {
+        text = text.replace("\r", ""); // Pulisco i dati sporchi
+        rows = text.split("\n").map(row => row.split(","));
+        reference = parseFloat(rows[0]); // Valore di riferimento
+        rows.shift(); // Rimuovo header con valore di riferimento
+    } catch (e) {
+        console.error("Errore durante la pulizia e suddivisione del CSV:", e);
+        return;
+    }
 
-    // Trovo massimi e minimi
-    let maxX = trovaMassimo(rows.map(item => item[0]));
-    let maxY = trovaMassimo(rows.map(item => item[1]));
-    let maxMag = trovaMassimo(rows.map(item => item[2]));
-    let minX = trovaMinimo(rows.map(item => item[0]));
-    let minY = trovaMinimo(rows.map(item => item[1]));
-    let minMag = trovaMinimo(rows.map(item => item[2]));
+    // Calcolo massimi, minimi e differenze da valore di riferimento
+    let maxX, maxY, distanceFromReference, leftSeries, rightSeries;
+    try {
+        maxX = trovaMassimo(rows.map(item => item[0])); // Trovo valore massimo
+        maxY = trovaMassimo(rows.map(item => item[1])); // trovo valore minimo
 
-    // Normalizzo i dati partendo da 0
-    const differenceX = minX < 0 ? 0 - minX : 0;
-    const differenceY = minY < 0 ? 0 - minY : 0;
-    maxX += differenceX;
-    maxY += differenceY;
+        // Calcolo la differenza con il valore di riferimento
+        distanceFromReference = rows.map(item => { return { original: parseFloat(item[2]), difference: parseFloat(item[2]) - reference }; });
+        leftSeries = distanceFromReference.filter(item => item.difference < 0); // Minori di 0 => Serie di sinistra (Blu)
+        rightSeries = distanceFromReference.filter(item => item.difference >= 0); // Maggiori di 0 => Serie di destra (Rosso)
+    } catch (e) {
+        console.error("Errore durante il calcolo di massimi, minimi e differenze:", e);
+        return;
+    }
 
-    // Creo oggetto mapping
+    // Normalizzo le serie
+    try {
+        leftSeries = normalizeSerires(leftSeries); // Normalizzo la serie di sinistra
+        rightSeries = normalizeSerires(rightSeries); // Normalizzo la serie di destra
+    } catch (e) {
+        console.error("Errore durante la normalizzazione delle serie:", e);
+        return;
+    }
+
+    // Creo oggetti classe Rainbow
+    const rainbowBlue = new Rainbow();
+    const rainbowRed = new Rainbow();
+    try {
+        rainbowBlue.setNumberRange(1, 100);
+        rainbowBlue.setSpectrum("white", "blue");
+        rainbowRed.setNumberRange(1, 100);
+        rainbowRed.setSpectrum("white", "red");
+    } catch (e) {
+        console.error("Errore durante la creazione degli oggetti Rainbow:", e);
+    }
+
+    // Ciclo le righe e creo mapping
     const dataMap = new Map();
-    rows.forEach(row => {
-        // Aggiungo differenza ai due assi per arrivare a 0
-        let x = parseInt(row[0]);
-        let y = parseInt(row[1]);
-        x += differenceX;
-        y += differenceY;
+    try {
+        rows.forEach(row => {
+            const x = parseInt(row[0]);
+            const y = parseInt(row[1]);
+            let mag = parseFloat(row[2]), magNorm, color;
+            if (mag < reference) { // Prendo i valori normalizzati
+                magNorm = parseInt(leftSeries.filter(item => item.original == mag)[0].absDifferenceNorm) || 0;
+                color = rainbowBlue.colourAt(magNorm); // Prendo la gradazione giusta
+            } else {
+                magNorm = parseInt(rightSeries.filter(item => item.original == mag)[0].absDifferenceNorm) || 0;
+                color = rainbowRed.colourAt(magNorm); // Prendo la gradazione giusta
+            }
 
-        // Normalizzo mag
-        const mag = parseFloat(row[2]);
-        const normalizedMag = normalizzaValore(mag, minMag, maxMag);
+            // Aggiungo a mapping
+            dataMap.set(`${x},${y}`, `#${color}`);
+        });
+    } catch (e) {
+        console.error("Errore durante la creazione del mapping:", e);
+    }
 
-        // Aggiungo a mapping
-        dataMap.set(`${x},${y}`, normalizedMag);
-    });
+    // Creo e aggiungo tabella alla view
+    try {
+        let table = createTable(maxX, maxY, dataMap);
+        table = fillBlanks(table);
+        const tableContainer = document.getElementById("tableContainer");
+        tableContainer.innerHTML = ""; // Pulisco il contenuto esistente
+        tableContainer.appendChild(table); // Aggiungo la nuova tabella
+    } catch (e) {
+        console.error("Errore durante la creazione della tabella:", e);
+    }
+};
 
-    // Creo e aggiungo tabella
-    let table = createTable(maxX, maxY, dataMap);
-    table = fillBlanks(table);
-    const tableContainer = document.getElementById("tableContainer");
-    tableContainer.innerHTML = ""; // Pulisco il contenuto esistente
-    tableContainer.appendChild(table); // Aggiungo la nuova tabella
-}
+// Normalizzo i valori delle serie
+const normalizeSerires = series => {
+    let absSeries = series.map(item => { return { original: item.original, difference: item.difference, absDifference: Math.abs(item.difference) }; }); // Aggiungo il valore assoluto
+    const max = trovaMassimo(absSeries.map(item => item.absDifference));
+    const min = trovaMinimo(absSeries.map(item => item.absDifference));
+    return absSeries.map(item => { return { original: item.original, difference: item.difference, absDifference: item.absDifference, absDifferenceNorm: normalizzaValore(item.absDifference, min, max) }; });
+};
 
 // Creo la tabella
 const createTable = (width, height, dataMap) => {
@@ -74,36 +125,29 @@ const createTable = (width, height, dataMap) => {
             td.style.height = tableCellHeight;
             const key = `${x},${y}`;
             if (dataMap.has(key))
-                td.style.backgroundColor = getColoreHeatMap(dataMap.get(key));
+                td.style.backgroundColor = dataMap.get(key); // Prendo colore
             tr.appendChild(td);
         }
         table.appendChild(tr);
     }
 
     return table;
-}
+};
 
 // Normalizzo un valore tra 0 e 100
 const normalizzaValore = (x, minValue, maxValue) => {
     return ((x - minValue) / (maxValue - minValue)) * 100;
-}
-
-// Genero un colore heatmap basato su un valore tra 0 e 100
-const getColoreHeatMap = valore => {
-    const rosso = valore * 255 / 100;
-    const blu = 255 - rosso;
-    return `rgb(${rosso}, 0, ${blu})`;
-}
+};
 
 // Trovo il massimo in un array
 const trovaMassimo = arr => {
     return arr.length === 0 ? undefined : Math.max(...arr);
-}
+};
 
 // Trovo il minimo in un array
 const trovaMinimo = arr => {
     return arr.length === 0 ? undefined : Math.min(...arr);
-}
+};
 
 // Riempio gli spazi bianchi
 const fillBlanks = table => {
@@ -116,19 +160,26 @@ const fillBlanks = table => {
         }
     }
     return table;
-}
+};
 
-// Genero il colore usando gli elementi intorno
+// Calcola la media dei colori intorno alla cella
 const getColorAverage = (x, y, rows) => {
-    let somma = 0;
-    let contatore = 0;
-    for (let i = -1; i <= 1; i++) { // Ciclo i-1, i, i+1
-        for (let j = -1; j <= 1; j++) { // Ciclo j-1, j, j+1
-            if (rows[y + i] && rows[y + i].cells[x + j] && rows[y + i].cells[x + j].style.backgroundColor) {
-                somma += parseInt(rows[y + i].cells[x + j].style.backgroundColor.replace("rgb(", "").replace(")", "").split(",")[0]);
-                contatore++;
+    let r = 0, g = 0, b = 0;
+    let count = 0;
+    for (let i = x - 1; i <= x + 1; i++) {
+        for (let j = y - 1; j <= y + 1; j++) {
+            if (i >= 0 && i < rows[0].cells.length && j >= 0 && j < rows.length) {
+                const cell = rows[j].cells[i];
+                if (cell.style.backgroundColor) {
+                    const rgb = cell.style.backgroundColor.match(/\d+/g);
+                    r += parseInt(rgb[0], 10);
+                    g += parseInt(rgb[1], 10);
+                    b += parseInt(rgb[2], 10);
+                    count++;
+                }
             }
         }
     }
-    return `rgb(${somma / contatore}, 0, ${255 - somma / contatore})`;
-}
+
+    if (count > 0) return `rgb(${Math.round(r / count)}, ${Math.round(g / count)}, ${Math.round(b / count)})`;
+};
