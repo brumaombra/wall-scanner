@@ -1,0 +1,27 @@
+body {
+    color: #262626;
+}
+
+.hidden {
+    display: none;
+}
+
+.content-center h2,
+.content-center p {
+    text-align: center;
+}
+
+.navbar-brand {
+    color: #262626;
+    font-weight: 500;
+}
+
+
+.nav-box-shadow {
+    /* box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15), inset 0 -1px 0 rgba(255, 255, 255, 0.15); */
+}
+
+.container-scansione {
+    width: fit-content;
+    margin: auto;
+}

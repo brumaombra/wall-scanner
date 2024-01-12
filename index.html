@@ -1,15 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Visualization</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
-    <input type="file" id="csvInput" accept=".csv" onchange="loadCSV(event)" />
-    <br/><br/>
-    <div id="tableContainer"></div>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg bg-body-tertiary nav-box-shadow mb-5">
+        <div class="container">
+            <a class="navbar-brand" href="#">Magnetic Visualizer</a>
+
+            <!-- Button per responsive -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- Collassa su mobile -->
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <div class="me-auto"></div>
+                <button class="btn btn-outline-success" type="submit" onclick="handleNewReadPress()">Nuova scansione</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Container principale -->
+    <div class="container">
+        <!-- Scansione -->
+        <div id="scansioneContainer" class="container-scansione hidden">
+            <h2>Scansione</h2>
+            <div id="tableContainer"></div>
+        </div>
+
+        <!-- Placeholder -->
+        <div id="scansionePlaceholder" class="content-center">
+            <h2>Fai la tua prima scansione!</h2>
+            <p>Usa il pulsante <b>Nuova scansione</b> per cominciare una nuova scansione!</p>
+        </div>
+    </div>
+
+    <!-- Script -->
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="js/rainbowVis.min.js"></script>
     <script src="js/script.js"></script>
-    <script src="js/rainbowvis.js"></script>
 </body>
+
 </html>

@@ -1,7 +1,12 @@
 // Parametri globali
 const tableCellWidth = "30px";
 const tableCellHeight = "30px";
-const tableCellBorder = "1px solid black";
+const tableCellBorder = "1px solid #34495e";
+
+// Click del pulsante
+const handleNewReadPress = () => {
+    fileInput.click(); // Simula un click sull'input
+};
 
 // Carico il CSV
 const loadCSV = event => {
@@ -97,6 +102,8 @@ const parseCSV = text => {
         const tableContainer = document.getElementById("tableContainer");
         tableContainer.innerHTML = ""; // Pulisco il contenuto esistente
         tableContainer.appendChild(table); // Aggiungo la nuova tabella
+        document.getElementById("scansionePlaceholder").classList.add("hidden"); // Nascondo container
+        document.getElementById("scansioneContainer").classList.remove("hidden"); // Visualizzo container
     } catch (e) {
         console.error("Errore durante la creazione della tabella:", e);
     }
@@ -183,3 +190,8 @@ const getColorAverage = (x, y, rows) => {
 
     if (count > 0) return `rgb(${Math.round(r / count)}, ${Math.round(g / count)}, ${Math.round(b / count)})`;
 };
+
+// Crea un input di tipo file
+const fileInput = document.createElement('input');
+fileInput.type = 'file';
+fileInput.addEventListener('change', loadCSV); // Aggiungi un event listener per gestire la selezione del file
