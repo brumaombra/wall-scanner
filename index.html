@@ -11,20 +11,11 @@
 
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg bg-body-tertiary nav-box-shadow mb-5">
+    <nav class="navbar navbar-expand-lg bg-body-tertiary mb-5">
         <div class="container">
             <a class="navbar-brand" href="#">Magnetic Visualizer</a>
-
-            <!-- Button per responsive -->
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <!-- Collassa su mobile -->
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <div class="me-auto"></div>
-                <button class="btn btn-outline-success" type="submit" onclick="handleNewReadPress()">Nuova scansione</button>
-            </div>
+            <div class="me-auto"></div>
+            <button id="newReadButton" type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newReadModal">Nuova scansione</button>
         </div>
     </nav>
 
@@ -32,6 +23,22 @@
     <div class="container">
         <!-- Scansione -->
         <div id="scansioneContainer" class="container-scansione hidden">
+            <!-- Area messaggi -->
+            <div class="messagges-container">
+                <!-- Recording... -->
+                <div id="recordingLogo" class="recording-object hidden">
+                    <div class="recording-ball"></div>
+                    <h3>Scansione in corso...</h3>
+                </div>
+
+                <!-- Logo success -->
+                <div id="successReadLogo" class="success-message-object hidden">
+                    <img src="img/green-checkmark.svg" class="success-green-tick" />
+                    <h3>Scansione terminata!</h3>
+                </div>
+            </div>
+
+            <!-- Matrice con scansione -->
             <h2>Scansione</h2>
             <div id="tableContainer"></div>
         </div>
@@ -42,8 +49,38 @@
             <p>Usa il pulsante <b>Nuova scansione</b> per cominciare una nuova scansione!</p>
         </div>
     </div>
+  
+    <!-- Modal nuova scansione -->
+    <div id="newReadModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5">Nuova scansione</h1>
+                </div>
+                <div class="modal-body">
+                    <p>Avviare la scansione?</p><hr/>
+
+                    <!-- Select risoluzione -->
+                    <div class="mb-3">
+                        <label class="form-label">Risoluzione</label>
+                        <select class="form-select">
+                            <option value="1">1 cm</option>
+                            <option value="2">2 cm</option>
+                            <option selected value="3">3 cm</option>
+                        </select>
+                        <div class="form-text">La risoluzione in cm della scansione</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">CHIUDI</button>
+                    <button type="button" class="btn btn-primary" onclick="handleNewReadPress()">AVVIA</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Script -->
+    <script src="js/jquery-3.7.1.min.js"></script>
     <script src="js/bootstrap.bundle.min.js"></script>
     <script src="js/rainbowVis.min.js"></script>
     <script src="js/script.js"></script>

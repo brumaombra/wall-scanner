@@ -1,0 +1,6 @@
+/read
+
+{
+    status: "reading"/"done",
+    data: "342;0,0,232;1,1,543"
+}

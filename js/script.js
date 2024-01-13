@@ -2,10 +2,42 @@
 const tableCellWidth = "30px";
 const tableCellHeight = "30px";
 const tableCellBorder = "1px solid #34495e";
+const ESP32IP = "192.168.4.1";
 
 // Click del pulsante
 const handleNewReadPress = () => {
-    fileInput.click(); // Simula un click sull'input
+    pollingRead(); // Inizio polling
+    $("#scansionePlaceholder").addClass("hidden"); // Nascondo container
+    $("#scansioneContainer").removeClass("hidden"); // Visualizzo container
+    $("#newReadButton").prop("disabled", true); // Disabilito il pulsante
+    $("#recordingLogo").removeClass("hidden"); // Visualizzo logo recording
+    $("#successReadLogo").addClass("hidden"); // Nascondo messaggio success
+    $("#newReadModal").modal("hide"); // Chiudo il modal
+};
+
+// Start della lettura (polling)
+const pollingRead = () => {
+    let polling = setInterval(() => {
+        $.ajax({
+            url: "http://localhost:3000/read",
+            // url: `${ESP32IP}/read`,
+            type: "GET",
+            success: response => {
+                if (response.status === "done") { // Controllo se terminare il polling
+                    clearInterval(polling); // Termino il polling
+                    $("#newReadButton").prop("disabled", false); // Abilito il pulsante
+                    $("#recordingLogo").addClass("hidden"); // Nascondo logo recording
+                    $("#successReadLogo").removeClass("hidden"); // Visualizzo messaggio success
+                    return;
+                }
+
+                // Parsing del CSV
+                parseCSV(response.data);
+            }, error: error => {
+                console.error(error);
+            }
+        });
+    }, 1000); // Ogni secondo
 };
 
 // Carico il CSV
@@ -28,8 +60,8 @@ const loadCSV = event => {
 const parseCSV = text => {
     let rows, reference;
     try {
-        text = text.replace("\r", ""); // Pulisco i dati sporchi
-        rows = text.split("\n").map(row => row.split(","));
+        // text = text.replace("\r", ""); // Pulisco i dati sporchi
+        rows = text.split(";").map(row => row.split(","));
         reference = parseFloat(rows[0]); // Valore di riferimento
         rows.shift(); // Rimuovo header con valore di riferimento
     } catch (e) {
@@ -102,8 +134,6 @@ const parseCSV = text => {
         const tableContainer = document.getElementById("tableContainer");
         tableContainer.innerHTML = ""; // Pulisco il contenuto esistente
         tableContainer.appendChild(table); // Aggiungo la nuova tabella
-        document.getElementById("scansionePlaceholder").classList.add("hidden"); // Nascondo container
-        document.getElementById("scansioneContainer").classList.remove("hidden"); // Visualizzo container
     } catch (e) {
         console.error("Errore durante la creazione della tabella:", e);
     }
@@ -190,8 +220,3 @@ const getColorAverage = (x, y, rows) => {
 
     if (count > 0) return `rgb(${Math.round(r / count)}, ${Math.round(g / count)}, ${Math.round(b / count)})`;
 };
-
-// Crea un input di tipo file
-const fileInput = document.createElement('input');
-fileInput.type = 'file';
-fileInput.addEventListener('change', loadCSV); // Aggiungi un event listener per gestire la selezione del file

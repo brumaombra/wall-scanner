@@ -3,7 +3,13 @@ body {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
+}
+
+.btn {
+    font-weight: 700;
+    padding: 8px 15px;
+    border-radius: 8px;
 }
 
 .content-center h2,
@@ -16,12 +22,60 @@ body {
     font-weight: 500;
 }
 
-
-.nav-box-shadow {
-    /* box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15), inset 0 -1px 0 rgba(255, 255, 255, 0.15); */
-}
-
 .container-scansione {
     width: fit-content;
     margin: auto;
+}
+
+/* Modal */
+.modal-content {
+    border: none;
+    border-radius: 10px;
+}
+.modal-body {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+.modal-backdrop {
+    --bs-backdrop-opacity: 0.4;
+}
+
+/* Zona messaggi */
+.messagges-container {
+    margin-bottom: 1rem;
+}
+
+/* Recording logo */
+.recording-object {
+    animation: blinkAnimation 2s infinite;
+    margin: auto;
+    width: fit-content;
+    display: flex;
+}
+.recording-ball {
+    height: 20px;
+    width: 20px;
+    background-color: red;
+    border-radius: 50%;
+    margin-right: 10px;
+    margin-top: 7px;
+}
+@keyframes blinkAnimation {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* Messaggio success */
+.success-message-object {
+    margin: auto;
+    width: fit-content;
+    display: flex;
+}
+.success-message-object h3 {
+    margin-bottom: 0;
+    line-height: 40px;
+}
+.success-green-tick {
+    width: 40px;
+    margin-right: 10px;
 }
