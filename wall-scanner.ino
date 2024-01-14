@@ -1,10 +1,10 @@
-// codice per leggere il tempo che intercorre tra un fronte e l altro dei segnali del metal detector quando una certa distanza Ë stata misurata con il mouse ottico
+// codice per leggere il tempo che intercorre tra un fronte e l altro dei segnali del metal detector quando una certa distanza √® stata misurata con il mouse ottico
 
 // codice per ESP32
 
-// il clock dell'ESP32 di default Ë 240MHz
+// il clock dell'ESP32 di default √® 240MHz
 
-// ATTENZIONE! Se il mouse non Ë collegato e/o non Ë propriamente alimentato, il codice si blocca nel setup aspettando che il mouse risponda
+// ATTENZIONE! Se il mouse non √® collegato e/o non √® propriamente alimentato, il codice si blocca nel setup aspettando che il mouse risponda
 
 // per l'ESP32, quando richiama una funzione da interrupt, questa deve essere precaricata in RAM tramite l'attributo IRAM_ATTR (invece che ICACHE_RAM_ATTR per ESP826)
 
@@ -39,21 +39,21 @@ volatile int elapsedTime = 0;
 volatile bool timerRunning = false;
 volatile bool printed = true;
 unsigned int i = 0;  // per fare la media
-float soglia = 0.5;  // soglia per sensibilit‡ per i LED
+float soglia = 0.5;  // soglia per sensibilit√† per i LED
 
 unsigned long prevMillis = millis();
 int XVal = 0, YVal = 0;
 int Xprec = 0, Yprec = 0;
 float Xcm = 0, Ycm = 0;
 
-bool first = true;  // per capire se Ë la prima iterazione
+bool first = true;  // per capire se √® la prima iterazione
 bool firstPython = true;
        
 
 void IRAM_ATTR startTimer() {
   noInterrupts();
   if (!timerRunning) {
-// se il timer non Ë attivo, azzero il contatore
+// se il timer non √® attivo, azzero il contatore
     timerCounter = ESP.getCycleCount();
     timerRunning = true;
   }

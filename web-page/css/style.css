@@ -37,7 +37,7 @@ body {
     padding-right: 1.5rem;
 }
 .modal-backdrop {
-    --bs-backdrop-opacity: 0.4;
+    --bs-backdrop-opacity: 0.35;
 }
 
 /* Zona messaggi */
@@ -78,4 +78,24 @@ body {
 .success-green-tick {
     width: 40px;
     margin-right: 10px;
+}
+
+/* Toast */
+.toast {
+    border: none;
+    box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+    border-radius: 10px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-bottom: 3px;
+    padding-top: 3px;
+}
+.toast .success-green-tick-toast {
+    width: 25px;
+    margin-right: 10px;
+}
+.toast-body p {
+    font-weight: 500;
+    align-self: center;
+    margin-bottom: 0;
 }

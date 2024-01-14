@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Visualization</title>
+    <title>Wall Scanner</title>
     <link rel="stylesheet" href="css/bootstrap.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -13,9 +13,12 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg bg-body-tertiary mb-5">
         <div class="container">
-            <a class="navbar-brand" href="#">Magnetic Visualizer</a>
+            <a class="navbar-brand" href="#">Wall Scanner</a>
             <div class="me-auto"></div>
-            <button id="newReadButton" type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newReadModal">Nuova scansione</button>
+            <button id="newReadButton" type="button" class="btn btn-primary me-2" data-bs-toggle="modal"
+                data-bs-target="#newReadModal">Nuova scansione</button>
+            <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
+                data-bs-target="#settingsModal">Impostazioni</button>
         </div>
     </nav>
 
@@ -49,7 +52,36 @@
             <p>Usa il pulsante <b>Nuova scansione</b> per cominciare una nuova scansione!</p>
         </div>
     </div>
-  
+
+    <!-- Modal impostazioni -->
+    <div id="settingsModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5">Impostazioni</h1>
+                </div>
+                <div class="modal-body">
+                    <!-- Risoluzione della scansione -->
+                    <div class="mb-3">
+                        <label class="form-label">Risoluzione</label>
+                        <select id="settingsResolution" class="form-select">
+                            <option value="1">1 cm</option>
+                            <option value="2">2 cm</option>
+                            <option selected value="3">3 cm</option>
+                            <option value="4">4 cm</option>
+                            <option value="5">5 cm</option>
+                        </select>
+                        <div class="form-text">La risoluzione in cm della scansione</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">CHIUDI</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="handleSaveSettingsPress()">SALVA</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal nuova scansione -->
     <div id="newReadModal" class="modal fade" tabindex="-1">
         <div class="modal-dialog">
@@ -58,24 +90,25 @@
                     <h1 class="modal-title fs-5">Nuova scansione</h1>
                 </div>
                 <div class="modal-body">
-                    <p>Avviare la scansione?</p><hr/>
-
-                    <!-- Select risoluzione -->
-                    <div class="mb-3">
-                        <label class="form-label">Risoluzione</label>
-                        <select class="form-select">
-                            <option value="1">1 cm</option>
-                            <option value="2">2 cm</option>
-                            <option selected value="3">3 cm</option>
-                        </select>
-                        <div class="form-text">La risoluzione in cm della scansione</div>
-                    </div>
+                    <p class="mb-0">Avviare la scansione?</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">CHIUDI</button>
                     <button type="button" class="btn btn-primary" onclick="handleNewReadPress()">AVVIA</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Toast salvataggio impostazioni -->
+    <div id="settingsSuccessToast" class="toast align-items-center bottom-0 end-0 mb-4 me-4 position-absolute" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body d-flex">
+                <img src="img/green-checkmark.svg" class="success-green-tick-toast" />
+                <p>Impostazioni salvate!</p>
+                
+            </div>
+            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     </div>
 

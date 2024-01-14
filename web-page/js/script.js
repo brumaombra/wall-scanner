@@ -2,7 +2,54 @@
 const tableCellWidth = "30px";
 const tableCellHeight = "30px";
 const tableCellBorder = "1px solid #34495e";
-const ESP32IP = "192.168.4.1";
+const ESP32IP = "http://localhost:3000"; // "192.168.4.1";
+
+// Documento pronto
+$(document).ready(() => {
+    init(); // Funzione init
+});
+
+// Funzione init
+const init = () => {
+    getConfuguration(); // Prendo la configurazione iniziale
+};
+
+// Prendo la configurazione iniziale
+const getConfuguration = () => {
+    $.ajax({
+        url: `${ESP32IP}/settings`,
+        type: "GET",
+        success: response => {
+            $("#settingsResolution").val(response.resolution || "3"); // Imposto risoluzione scansione
+        }, error: error => {
+            console.error(error);
+        }
+    });
+};
+
+// Salvo le impostazioni
+const handleSaveSettingsPress = () => {
+    const settings = { // Oggetto impostazioni
+        resolution: $("#settingsResolution").val()
+    };
+
+    // Chiamata
+    $.ajax({
+        url: `${ESP32IP}/settings`,
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(settings),
+        success: response => {
+            $("#settingsSuccessToast").toast({
+                delay: 2000
+            }).toast("show");
+        }, error: error => {
+            console.error(error);
+        }
+    });
+};
+
+/*********************************** Creazione della heatmap ***********************************/
 
 // Click del pulsante
 const handleNewReadPress = () => {
@@ -19,8 +66,7 @@ const handleNewReadPress = () => {
 const pollingRead = () => {
     let polling = setInterval(() => {
         $.ajax({
-            url: "http://localhost:3000/read",
-            // url: `${ESP32IP}/read`,
+            url: `${ESP32IP}/read`,
             type: "GET",
             success: response => {
                 if (response.status === "done") { // Controllo se terminare il polling
@@ -40,27 +86,10 @@ const pollingRead = () => {
     }, 1000); // Ogni secondo
 };
 
-// Carico il CSV
-const loadCSV = event => {
-    try {
-        const file = event.target.files[0];
-        if (!file) return; // Se vuoto esco
-        const reader = new FileReader();
-        reader.onload = e => {
-            parseCSV(e.target.result || "");
-        };
-        reader.readAsText(file);
-    } catch (e) {
-        console.error("Errore durante il caricamento del file:", e);
-        return;
-    }
-};
-
 // Faccio il parsing del CSV
 const parseCSV = text => {
     let rows, reference;
     try {
-        // text = text.replace("\r", ""); // Pulisco i dati sporchi
         rows = text.split(";").map(row => row.split(","));
         reference = parseFloat(rows[0]); // Valore di riferimento
         rows.shift(); // Rimuovo header con valore di riferimento

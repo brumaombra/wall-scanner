@@ -1,6 +1,12 @@
-/read
+/read (GET)
 
 {
-    status: "reading"/"done",
+    status: "reading" / "done",
     data: "342;0,0,232;1,1,543"
+}
+
+/settings (GET/POST)
+
+{
+    resolution: "3"
 }
