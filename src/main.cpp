@@ -2,66 +2,84 @@
 #include <WebServer.h>
 #include <SPIFFS.h>
 
-const char *ssid = "ESP32-Access-Point";
+const char *ssid = "Wall-Scanner";
 WebServer server(80);
+int resolution = 1;
 
-void setup()
-{
-    Serial.begin(115200);
+// Spezzo il file e mando il contenuto al client
+void splitAndSend(const char* path, const char* type) {
+    File file = SPIFFS.open(path, "r");
+    if (!file) { // Controllo se il file è stato caricato correttamente
+        server.send(500, "text/plain", "Errore interno del server");
+        return;
+    }
 
-    // Inizializzare SPIFFS
-    if (!SPIFFS.begin(true))
-    {
+    // Spezzo il file e mando
+    server.setContentLength(file.size());
+    server.send(200, type, "");
+    const size_t bufferSize = 1024;
+    char buffer[bufferSize];
+    while (file.available()) {
+        size_t len = file.readBytes(buffer, bufferSize);
+        server.sendContent_P(buffer, len);
+    }
+    file.close(); // Chiudo il file
+}
+
+// faccio partire il server web
+void setServerWeb() {
+    if (!SPIFFS.begin(true)) { // Inizializzo SPIFFS
         Serial.println("Errore nell'inizializzazione di SPIFFS");
         return;
     }
 
-    // Configurare l'ESP32 come Access Point
+    // Configuro l'ESP come Access Point
     WiFi.softAP(ssid);
-    Serial.println("Access Point avviato");
 
-    // Route per servire la pagina web
-    server.on("/", HTTP_GET, []()
-              { server.send(200, "text/html", SPIFFS.open("/index.html", "r").readString()); });
-
-    // Route per file CSS
+    // Routes file
+    server.on("/", HTTP_GET, []() {
+        splitAndSend("/index.html", "text/html");
+    });
     server.on("/css/bootstrap.min.css", HTTP_GET, []() {
-        server.send(200, "text/css", SPIFFS.open("/css/bootstrap.min.css", "r").readString());
+        splitAndSend("/css/bootstrap.min.css", "text/css");
     });
-
-    // Route per file JavaScript
-    server.on("/js/bootstrap.bundle.min.js", HTTP_GET, [](){
-        server.send(200, "text/javascript", SPIFFS.open("/js/bootstrap.bundle.min.js", "r").readString());
-        Serial.println(SPIFFS.open("/js/bootstrap.bundle.min.js", "r").readString());
+    server.on("/css/style.css", HTTP_GET, []() {
+        splitAndSend("/css/style.css", "text/css");
     });
-
-    /* Route per file JavaScript
     server.on("/js/bootstrap.bundle.min.js", HTTP_GET, []() {
-        File file = SPIFFS.open("/js/bootstrap.bundle.min.js", "r");
-        if (!file) {
-            Serial.println("Errore nell'apertura del file");
-            server.send(500, "text/plain", "Errore interno del server");
-            return;
-        }
-
-        server.setContentLength(file.size());
-        server.send(200, "text/javascript", "");
-        
-        const size_t bufferSize = 1024;
-        char buffer[bufferSize];
-        while (file.available()) {
-            size_t len = file.readBytes(buffer, bufferSize);
-            server.sendContent_P(buffer, len);
-        }
-        file.close();
+        splitAndSend("/js/bootstrap.bundle.min.js", "text/javascript");
     });
-    */
+    server.on("/js/jquery-3.7.1.min.js", HTTP_GET, []() {
+        splitAndSend("/js/jquery-3.7.1.min.js", "text/javascript");
+    });
+    server.on("/js/rainbowVis.min.js", HTTP_GET, []() {
+        splitAndSend("/js/rainbowVis.min.js", "text/javascript");
+    });
+    server.on("/js/script.js", HTTP_GET, []() {
+        splitAndSend("/js/script.js", "text/javascript");
+    });
+
+    // Routes servizi
+    server.on("/settings", HTTP_GET, []() {
+        String json = "{\"resolution\": " + String(resolution) + "}";
+        server.send(200, "application/json", json);
+    });
+    server.on("/settings", HTTP_POST, []() {
+        String body = server.arg("plain");
+        server.send(200, "application/json", body);
+    });
 
     // Avviare il server
     server.begin();
 }
 
-void loop()
-{
+// Setup
+void setup() {
+    Serial.begin(115200);
+    setServerWeb(); // Faccio partire il server web
+}
+
+// Loop
+void loop() {
     server.handleClient();
 }
