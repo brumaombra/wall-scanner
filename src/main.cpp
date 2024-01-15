@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <SPIFFS.h>
+#include <ArduinoJson.h>
 
 const char *ssid = "Wall-Scanner";
 WebServer server(80);
@@ -61,12 +62,26 @@ void setServerWeb() {
 
     // Routes servizi
     server.on("/settings", HTTP_GET, []() {
-        String json = "{\"resolution\": " + String(resolution) + "}";
+        JsonDocument doc;
+        doc["resolution"] = resolution;
+        String json;
+        serializeJson(doc, json);
         server.send(200, "application/json", json);
     });
     server.on("/settings", HTTP_POST, []() {
         String body = server.arg("plain");
-        server.send(200, "application/json", body);
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, body);
+        if (error) { // Controllo se il formato JSON è corretto
+            server.send(400, "text/plain", "Errore nel formato JSON");
+            return;
+        }
+
+        resolution = doc["resolution"]; // Sovrascrivo risoluzione
+        doc["resolution"] = resolution; // Mando la variabile aggiornata al front-end
+        String json;
+        serializeJson(doc, json);
+        server.send(200, "application/json", json);
     });
 
     // Avviare il server
