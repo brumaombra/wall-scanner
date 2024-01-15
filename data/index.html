@@ -15,10 +15,8 @@
         <div class="container">
             <a class="navbar-brand" href="#">Wall Scanner</a>
             <div class="me-auto"></div>
-            <button id="newReadButton" type="button" class="btn btn-primary me-2" data-bs-toggle="modal"
-                data-bs-target="#newReadModal">Nuova scansione</button>
-            <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
-                data-bs-target="#settingsModal">Impostazioni</button>
+            <button id="newReadButton" type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#newReadModal">Nuova scansione</button>
+            <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#settingsModal">Impostazioni</button>
         </div>
     </nav>
 
@@ -36,7 +34,7 @@
 
                 <!-- Logo success -->
                 <div id="successReadLogo" class="success-message-object hidden">
-                    <img src="img/green-checkmark.svg" class="success-green-tick" />
+                    <img src="/img/green-checkmark.svg" class="success-green-tick" />
                     <h3>Scansione terminata!</h3>
                 </div>
             </div>
@@ -64,7 +62,7 @@
                     <!-- Risoluzione della scansione -->
                     <div class="mb-3">
                         <label class="form-label">Risoluzione</label>
-                        <select id="settingsResolution" class="form-select">
+                        <select id="settingsResolution" class="form-select form-select-lg">
                             <option value="1">1 cm</option>
                             <option value="2">2 cm</option>
                             <option selected value="3">3 cm</option>
@@ -104,9 +102,8 @@
     <div id="settingsSuccessToast" class="toast align-items-center bottom-0 end-0 mb-4 me-4 position-absolute" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body d-flex">
-                <img src="img/green-checkmark.svg" class="success-green-tick-toast" />
+                <img src="/img/green-checkmark.svg" class="success-green-tick-toast" />
                 <p>Impostazioni salvate!</p>
-                
             </div>
             <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>

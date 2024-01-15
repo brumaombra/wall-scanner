@@ -2,7 +2,7 @@
 const tableCellWidth = "30px";
 const tableCellHeight = "30px";
 const tableCellBorder = "1px solid #34495e";
-const ESP32IP = "192.168.4.1"; // "http://localhost:3000"
+const ESP32IP = ""; // "http://localhost:3000"
 
 // Documento pronto
 $(document).ready(() => {

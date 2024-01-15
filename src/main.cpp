@@ -59,6 +59,9 @@ void setServerWeb() {
     server.on("/js/script.js", HTTP_GET, []() {
         splitAndSend("/js/script.js", "text/javascript");
     });
+    server.on("/img/green-checkmark.svg", HTTP_GET, []() {
+        splitAndSend("/img/green-checkmark.svg", "image/svg+xml");
+    });
 
     // Routes servizi
     server.on("/settings", HTTP_GET, []() {

@@ -6,22 +6,33 @@ body {
     display: none !important;
 }
 
+.content-center h2,
+.content-center p {
+    text-align: center;
+}
+
+/* Form */
+.form-label {
+    font-weight: 600;
+}
+.form-select {
+    border-radius: 12px;
+}
+
+/* Pulsanti */
 .btn {
     font-weight: 700;
     padding: 8px 15px;
     border-radius: 8px;
 }
 
-.content-center h2,
-.content-center p {
-    text-align: center;
-}
-
+/* Navbar */
 .navbar-brand {
     color: #262626;
-    font-weight: 500;
+    font-weight: 700;
 }
 
+/* Container della matrice */
 .container-scansione {
     width: fit-content;
     margin: auto;
