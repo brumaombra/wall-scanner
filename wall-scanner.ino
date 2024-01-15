@@ -489,29 +489,20 @@ void loop()
 
         if (Xprec != int(Xcm) / NCM | Yprec != int(Ycm) / NCM)
       {
-
                   Xprec = int(Xcm) / NCM;
-
                   Yprec = int(Ycm) / NCM;
-
                   OKXY = true;
-
                 
       }
 
               if ((Xcm - int(Xcm / NCM) * NCM > float(NCM) / 3) && (Xcm - int(Xcm / NCM) * NCM < float(NCM) * 2 / 3) && OKXY)
       {
-
                   OKXY = false;
-
                   stato = 4;
-
                   interrupts();
-
                 
       }
     }
-
         break;
 
       case 4:
@@ -519,37 +510,23 @@ void loop()
 
       if (!printed)
     {
-
               if (i < 500)
       {
-
                   delta = delta + elapsedTime / 240; // in micros
-
                   elapsedTime = 0;
-
                   i++;
-
-                  delayMicroseconds(200);
-
-                
+                  delayMicroseconds(200);  
       }
       else
       {
-
                     i = 0;
-
                     delta = delta / 501;
-
                     stampaNormale(int(Xcm / NCM), int(Ycm / NCM), delta);
-
                      //stampaPython(int(Xcm/NCM), int(Ycm/NCM), delta);
-
             printed = true;
 
                     LedPWM();
-
                     stato = 5;
-
                     first = true;
 
                   
@@ -564,18 +541,13 @@ void loop()
 
     case 5:
         // Invio file con WiFi
-
          // invio
 
       stato = 3;
 
-        break;
+        break; 
 
-         
-
-    case 6:
-
-           
+    case 6:      
 
     break;
 
