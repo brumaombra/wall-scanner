@@ -349,18 +349,18 @@ void setupPin() {
     pinMode(centralLED, OUTPUT);
     pinMode(upperLED, OUTPUT);
     pinMode(lowerLED, OUTPUT);
-}
-
-// Setup
-void setup() {
-    setServerWeb(); // Faccio partire il server web
-    noInterrupts();
-    Serial.begin(115200);
-    setupPin(); // Inizializzo i pin
     ledcSetup(REDCH, 1000, 8);
     ledcAttachPin(REDLED, REDCH);
     ledcSetup(YELLCH, 1000, 8);
     ledcAttachPin(GREENLED, YELLCH);
+}
+
+// Setup
+void setup() {
+    Serial.begin(115200);
+    setServerWeb(); // Faccio partire il server web
+    noInterrupts();
+    setupPin(); // Inizializzo i pin
 
     // Inizializzo il mouse
     if (mouse.initialise() != 0) { // Errore nell'inizializzazione del mouse
