@@ -1,401 +1,566 @@
-// codice per leggere il tempo che intercorre tra un fronte e l'altro dei
-// segnali del metal detector quando una certa distanza ? stata misurata con il
-// mouse ottico codice per ESP32 V2.2 il clock dell'ESP32 di default ? 240MHz
-// ATTENZIONE! Se il mouse non ? collegato e/o non ? propriamente alimentato, il
-// codice si blocca nel setup aspettando che il mouse risponda per l'ESP32,
-// quando richiama una funzione da interrupt, questa deve essere precaricata in
-// RAM tramite l'attributo IRAM_ATTR (invece che ICACHE_RAM_ATTR per ESP826)
+// codice per leggere il tempo che intercorre tra un fronte e l'altro dei segnali del metal detector quando una certa distanza ? stata misurata con il mouse ottico
+
+
+// codice per ESP32 V2.2
+
+
+// il clock dell'ESP32 di default ? 240MHz
+
+
+// ATTENZIONE! Se il mouse non ? collegato e/o non ? propriamente alimentato, il codice si blocca nel setup aspettando che il mouse risponda
+
+
+// per l'ESP32, quando richiama una funzione da interrupt, questa deve essere precaricata in RAM tramite l'attributo IRAM_ATTR (invece che ICACHE_RAM_ATTR per ESP826)
+
+
 // coefficiente per mouse: 0.01151
+
+
 // esempio di testo per creare un'immagine con python:
+
 // dati = [((0, 0), 255), ((1, 0), 128), ((2, 0), 0),
-//         ((0, 1), 0), ((1, 1), 64), ((2, 1), 255)]
+
+//        ((0, 1), 0), ((1, 1), 64), ((2, 1), 255)]
+
+
 // misura al centro del pixel quadrato e dimensione pixel parametrizzabile
+
 
 #include <PS2MouseHandler.h>
 
 #define MOUSE_DATA 18
+
 #define MOUSE_CLOCK 5
+
+
 PS2MouseHandler mouse(MOUSE_CLOCK, MOUSE_DATA, PS2_MOUSE_REMOTE);
+
+
 #define TXPIN 21
+
 #define RXPIN 19
+
 #define REDLED 23
+
 #define GREENLED 22
+
 #define upperLED 17
+
 #define centralLED 16
+
 #define lowerLED 4
+
 #define BUTTON 15
+
 #define REDCH 0
+
 #define YELLCH 1
 
-// Variabili globali
-unsigned int stato = 0; // Stato switch
+
+// Dichiarazioni
+
+unsigned int stato = 0;  // a che funzione sono, switch
+
+
 volatile unsigned long timerCounter = 0;
+
 volatile float delta = 0;
+
 volatile float Fi0 = 29;
+
 volatile int elapsedTime = 0;
+
 volatile bool timerRunning = false;
+
 volatile bool printed = true;
-unsigned int i = 0; // Per fare la media
-float soglia = 0.5; // Soglia per sensibilità LED
+
+unsigned int i = 0;  // per fare la media
+
+float soglia = 0.5;  // soglia per sensibilit? per i LED
+
+
 unsigned long prevMillis = millis();
+
 int XVal = 0, YVal = 0;
+
 int Xprec = 0, Yprec = 0;
+
 float Xcm = 0, Ycm = 0;
-byte NCM = 5; // Numero di cm ogni quanto fare una misura
-bool first = true; // Per capire se è la prima iterazione
+
+byte NCM = 3;  // numero di cm ogni quanto fare una misura
+
+
+bool first = true;  // per capire se ? la prima iterazione
+
 bool firstPython = true;
-bool OKXY = true; // Per capire se ho già misurato in un certo pixel
+
+bool OKXY = true;   // variabile per capire se ho già misurato in un certo pixel
+
+       
+
 
 void IRAM_ATTR startTimer() {
-    noInterrupts();
-    if (!timerRunning) {  // se il timer non ? attivo, azzero il contatore
-        timerCounter = ESP.getCycleCount();
-        timerRunning = true;
-    }
 
-    interrupts();
+  noInterrupts();
+
+  if (!timerRunning) {
+
+// se il timer non ? attivo, azzero il contatore
+
+    timerCounter = ESP.getCycleCount();
+
+    timerRunning = true;
+
+  }
+
+  interrupts();
+
 }
+
 
 void IRAM_ATTR stopTimer() {
-    if (timerRunning) {
-        elapsedTime = ESP.getCycleCount() - timerCounter;
 
-        noInterrupts();
+  if (timerRunning) {
 
-        timerRunning = false;
+    elapsedTime = ESP.getCycleCount()-timerCounter;
 
-        printed = false;
-    }
+    noInterrupts();
+
+    timerRunning = false;
+
+    printed = false;
+
+  }
+
 }
+
 
 void LedPWM() {
-    if (delta > Fi0 + soglia) {
-        ledcWrite(REDCH, 10 * (delta - (Fi0 + soglia)));
 
-        ledcWrite(YELLCH, 0);
-    }
+  if(delta>Fi0+soglia) {
 
-    if (delta < Fi0 - soglia) {
-        ledcWrite(YELLCH, 30 * (Fi0 - soglia - delta));
+    ledcWrite(REDCH, 10*(delta-(Fi0+soglia)));
 
-        ledcWrite(REDCH, 0);
-    }
+    ledcWrite(YELLCH, 0);
 
-    if ((delta > Fi0 - soglia) && (delta < Fi0 + soglia)) {
-        ledcWrite(REDCH, 0);
+  }
 
-        ledcWrite(YELLCH, 0);
-    }
+  if(delta<Fi0-soglia) {
+
+    ledcWrite(YELLCH, 30*(Fi0-soglia-delta));
+
+    ledcWrite(REDCH, 0);
+
+  }
+
+  if((delta>Fi0-soglia) && (delta<Fi0+soglia)) {
+
+    ledcWrite(REDCH, 0);
+
+    ledcWrite(YELLCH, 0);
+
+  }
+
 }
 
-void stampaPython(int X, int Y, float mag) {
-    if (firstPython) {
-        firstPython = false;
 
-        i = 0;
+void stampaPython(int X, int Y, float mag){
 
-        Serial.print("dati = [");
-    }
+    if(firstPython){
 
-    Serial.print("((");
+        firstPython = false;
 
-    Serial.print(X);
+        i = 0;
 
-    Serial.print(", ");
+        Serial.print("dati = [");
 
-    Serial.print(Y);
+    }
 
-    Serial.print("), ");
+    Serial.print("((");
 
-    Serial.print(int((mag * 8) - 140));
+    Serial.print(X);
 
-    Serial.print("), ");
+    Serial.print(", ");
 
-    i++;
+    Serial.print(Y);
 
-    if (i = 3) {
-        i = 0;
+    Serial.print("), ");
 
-        Serial.println(" ");
-    }
+    Serial.print(int((mag*8)-140));
+
+    Serial.print("), ");
+
+    i++;
+
+    if(i = 3) {
+
+        i = 0;
+
+        Serial.println(" ");
+
+    }
+
 }
 
-void stampaNormale(int X, int Y, float mag) {
-    // Serial.print("X: ");       // leggibile
 
-    Serial.print(X);
+void stampaNormale(int X, int Y, float mag){
 
-    Serial.print(",");
-    // per CSV
+    //Serial.print("X: ");       // leggibile
 
-    // Serial.print(" , Y: ");        // leggibile
+    Serial.print(X);
 
-    Serial.print(Y);
+    Serial.print(",");         // per CSV
 
-    Serial.print(",");
-    // per CSV
+    //Serial.print(" , Y: ");        // leggibile
 
-    // Serial.print(" , Mag: "); // leggibile
+    Serial.print(Y);
 
-    Serial.println(mag, 1);
+    Serial.print(",");            // per CSV
+
+    //Serial.print(" , Mag: "); // leggibile
+
+    Serial.println(mag, 1);
+
 }
+
 
 void LEDUpDown(float Ycm, int Yprec) {
-    if (Ycm - int((Ycm / NCM) * NCM > float(NCM) / 3) &&
-        (Ycm - int(Ycm / NCM) * NCM < float(NCM) * 2 / 3)) {
-        // accendo il LED centrale
 
-        digitalWrite(centralLED, HIGH);
 
-        digitalWrite(upperLED, LOW);
+  if(Ycm-int((Ycm/NCM)*NCM > float(NCM)/3) && (Ycm-int(Ycm/NCM)*NCM < float(NCM)*2/3)) {    // accendo il LED centrale
 
-        digitalWrite(lowerLED, LOW);
-    }
+    digitalWrite(centralLED, HIGH);
 
-    if (Ycm - int(Ycm / NCM) * NCM > float(NCM) * 2 / 3) {
-        // accendo il LED in basso
+    digitalWrite(upperLED, LOW);
 
-        digitalWrite(centralLED, LOW);
+    digitalWrite(lowerLED, LOW);
 
-        digitalWrite(upperLED, LOW);
+  }
 
-        digitalWrite(lowerLED, HIGH);
-    }
+  if(Ycm-int(Ycm/NCM)*NCM > float(NCM)*2/3) {    // accendo il LED in basso
 
-    if (Ycm - int(Ycm / NCM) * NCM < float(NCM) / 3) {
-        // accendo il LED in alto
+    digitalWrite(centralLED, LOW);
 
-        digitalWrite(centralLED, LOW);
+    digitalWrite(upperLED, LOW);
 
-        digitalWrite(upperLED, HIGH);
+    digitalWrite(lowerLED, HIGH);
 
-        digitalWrite(lowerLED, LOW);
-    }
+  }
+
+  if(Ycm-int(Ycm/NCM)*NCM < float(NCM)/3) {    // accendo il LED in alto
+
+    digitalWrite(centralLED, LOW);
+
+    digitalWrite(upperLED, HIGH);
+
+    digitalWrite(lowerLED, LOW);
+
+  }
+
 }
+
+           
 
 void setup() {
-    noInterrupts();
 
-    Serial.begin(115200);
+   
 
-    pinMode(BUTTON, INPUT_PULLUP);
+  noInterrupts();
 
-    pinMode(TXPIN, INPUT);
+       
 
-    pinMode(RXPIN, INPUT);
+  Serial.begin(115200);
 
-    pinMode(REDLED, OUTPUT);
 
-    pinMode(GREENLED, OUTPUT);
+  pinMode(BUTTON, INPUT_PULLUP);
 
-    pinMode(centralLED, OUTPUT);
+  pinMode(TXPIN, INPUT);
 
-    pinMode(upperLED, OUTPUT);
+  pinMode(RXPIN, INPUT);
 
-    pinMode(lowerLED, OUTPUT);
+  pinMode(REDLED, OUTPUT);
 
-    ledcSetup(REDCH, 1000, 8);
+  pinMode(GREENLED, OUTPUT);
 
-    ledcAttachPin(REDLED, REDCH);
+  pinMode(centralLED, OUTPUT);
 
-    ledcSetup(YELLCH, 1000, 8);
+  pinMode(upperLED, OUTPUT);
 
-    ledcAttachPin(GREENLED, YELLCH);
+  pinMode(lowerLED, OUTPUT);
 
-    if (mouse.initialise() != 0) {
-        // mouse error
+   
 
-        Serial.println("mouse error");
-    };
+  ledcSetup(REDCH, 1000, 8);
 
-    interrupts();
+  ledcAttachPin(REDLED, REDCH);
+
+  ledcSetup(YELLCH, 1000, 8);
+
+  ledcAttachPin(GREENLED, YELLCH);
+
+
+  if(mouse.initialise() != 0){
+
+  // mouse error
+
+  Serial.println("mouse error");
+
+  };
+
+   
+
+  interrupts();
+
 }
+
 
 void loop() {
-    switch (stato) {
-        case 0:
-            // configurazione WiFi
 
-            // qui configuro il wifi
+  switch(stato) {
 
-            if (!digitalRead(BUTTON)) {
-                first = true;
+    case 0:    // configurazione WiFi
 
-                Serial.println("Pulsante premuto!");
+      // qui configuro il wifi
 
-                stato = 1;
+      if(!digitalRead(BUTTON)){
 
-                attachInterrupt(TXPIN, startTimer, RISING);
+        first = true;
 
-                attachInterrupt(RXPIN, stopTimer, FALLING);
-            }
+        Serial.println("Pulsante premuto!");
 
-            break;
+        stato = 1;
 
-        case 1:
-            // taro la bobina
+        attachInterrupt(TXPIN, startTimer, RISING);
 
-            if (first) {
-                first = false;
+        attachInterrupt(RXPIN, stopTimer, FALLING);
 
-                delay(1000);
-            }
+      }
 
-            if (!printed) {
-                if (i < 60) {
-                    delta = delta + elapsedTime / 240;  // in micros
+    break;
 
-                    elapsedTime = 0;
+       
 
-                    i++;
+    case 1:    // taro la bobina
 
-                    delayMicroseconds(200);
+      if(first){
 
-                } else {
-                    i = 0;
+        first = false;
 
-                    delta = delta / 61;
+        delay(1000);
 
-                    Serial.println(delta, 1);
+      }
 
-                    printed = true;
+      if(!printed) {
 
-                    LedPWM();
+        if(i < 60){
 
-                    stato = 1;
-                }
-            }
+          delta = delta + elapsedTime/240; // in micros
 
-            if (!digitalRead(BUTTON)) {
-                first = true;
+          elapsedTime = 0;
 
-                stato = 2;
+          i++;
 
-                Serial.println("----------");
-            }
+          delayMicroseconds(200);
 
-            interrupts();
+        } else {
 
-            break;
+            i = 0;
 
-        case 2:
-            // Taro il delay
+            delta = delta/61;
 
-            if (!printed) {
-                if (i < 5000) {
-                    Fi0 = Fi0 + float(elapsedTime) / 240;  // in micros
+            Serial.println(delta, 1);
 
-                    elapsedTime = 0;
+            printed = true;
 
-                    i++;
+            LedPWM();
 
-                    delayMicroseconds(200);
+            stato = 1;
 
-                } else {
-                    i = 0;
+           }
 
-                    Fi0 = Fi0 / 5035;
+      }
 
-                    Serial.println(Fi0, 1);
+      if(!digitalRead(BUTTON)){
 
-                    delay(1);
+        first = true;
 
-                    Serial.println("----------");
+        stato = 2;
 
-                    LedPWM();
+        Serial.println("----------");
 
-                    delay(1000);
+      }
 
-                    printed = true;
+      interrupts();
 
-                    first = true;
+       
 
-                    stato = 3;
-                }
-            }
+      break;
 
-            interrupts();
+       
 
-            break;
+    case 2:    // Taro il delay
 
-        case 3:
-            // Controllo se mi sono mosso
+      if(!printed) {
 
-            if (first) {
-                first = false;
+        if(i < 5000){
 
-                noInterrupts();
-            }
+          Fi0 = Fi0 + float(elapsedTime)/240; // in micros
 
-            if (millis() - prevMillis > 200) {
-                prevMillis = millis();
+          elapsedTime = 0;
 
-                LedPWM();
+          i++;
 
-                mouse.get_data();
+          delayMicroseconds(200);
 
-                XVal += mouse.x_movement();
+          } else {
 
-                YVal += mouse.y_movement();
+              i = 0;
 
-                Xcm = XVal * 0.01151;
+              Fi0 = Fi0/5035;
 
-                Ycm = YVal * 0.01151;
+              Serial.println(Fi0, 1);
 
-                // Serial.print("Xcm-int((Xcm/NCM)*NCM: ");
-                // Serial.println(Xcm-int((Xcm/NCM)*NCM));
+              delay(1);
 
-                LEDUpDown(Ycm, Yprec);
+              Serial.println("----------");
 
-                if (Xprec != int(Xcm) / NCM | Yprec != int(Ycm) / NCM) {
-                    Xprec = int(Xcm) / NCM;
-                    Yprec = int(Ycm) / NCM;
-                    OKXY = true;
-                }
+              LedPWM();
 
-                if ((Xcm - int(Xcm / NCM) * NCM > float(NCM) / 3) &&
-                    (Xcm - int(Xcm / NCM) * NCM < float(NCM) * 2 / 3) && OKXY) {
-                    OKXY = false;
-                    stato = 4;
-                    interrupts();
-                }
-            }
-            break;
+              delay(1000);
 
-        case 4:
-            // Misuro magnetismo e torno a misurare
+              printed = true;
 
-            if (!printed) {
-                if (i < 500) {
-                    delta = delta + elapsedTime / 240;  // in micros
-                    elapsedTime = 0;
-                    i++;
-                    delayMicroseconds(200);
-                } else {
-                    i = 0;
-                    delta = delta / 501;
-                    stampaNormale(int(Xcm / NCM), int(Ycm / NCM), delta);
-                    // stampaPython(int(Xcm/NCM), int(Ycm/NCM), delta);
-                    printed = true;
+              first = true;
 
-                    LedPWM();
-                    stato = 5;
-                    first = true;
-                }
-            }
+              stato = 3;
 
-            break;
+             }
 
-        case 5:
-            // Invio file con WiFi
-            // invio
+       }
 
-            stato = 3;
+        interrupts();
 
-            break;
+        break;
 
-        case 6:
+       
 
-            break;
+    case 3:    // Controllo se mi sono mosso
+
+      if(first) {
+
+        first = false;
+
+        noInterrupts();
+
+      }
+
+
+      if (millis() - prevMillis > 200) {
+
+        prevMillis = millis();
+
+        LedPWM();
+
+        mouse.get_data();
+
+
+        XVal += mouse.x_movement();
+
+        YVal += mouse.y_movement();
+
+        Xcm = XVal*0.01151;
+
+        Ycm = YVal*0.01151;
+            
+            //Serial.print("Xcm-int((Xcm/NCM)*NCM: ");
+           // Serial.println(Xcm-int((Xcm/NCM)*NCM));
+
+
+        LEDUpDown(Ycm, Yprec);
+
+           
+
+        if(Xprec != int(Xcm)/NCM | Yprec != int(Ycm)/NCM){
+
+          Xprec = int(Xcm)/NCM;
+
+          Yprec = int(Ycm)/NCM;
+
+          OKXY = true;
+
+        }
+
+        if((Xcm-int(Xcm/NCM)*NCM > float(NCM)/3) && (Xcm-int(Xcm/NCM)*NCM < float(NCM)*2/3) && OKXY){
+
+          OKXY = false;
+
+          stato = 4;
+
+          interrupts();
+
+        }
     }
+
+    break;
+
+
+    case 4:  // Misuro magnetismo e torno a misurare
+
+      if(!printed) {
+
+        if(i < 500){
+
+          delta = delta + elapsedTime/240; // in micros
+
+          elapsedTime = 0;
+
+          i++;
+
+          delayMicroseconds(200);
+
+        } else {
+
+            i = 0;
+
+            delta = delta/501;
+
+            stampaNormale(int(Xcm/NCM), int(Ycm/NCM), delta);
+
+            //stampaPython(int(Xcm/NCM), int(Ycm/NCM), delta);
+
+            printed = true;
+
+            LedPWM();
+
+            stato = 5;
+
+            first = true;
+
+          }
+
+      }
+
+    break;
+
+       
+
+    case 5:    // Invio file con WiFi
+
+        // invio
+
+      stato = 3;
+
+    break;
+
+       
+
+    case 6:
+
+       
+
+    break;
+
+  }
+
 }
+
