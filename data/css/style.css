@@ -6,9 +6,21 @@ body {
     display: none !important;
 }
 
+/* Font size */
+.fs-25 { font-size: 25px; }
+.fs-40 { font-size: 40px; }
+.fs-60 { font-size: 60px; }
+
+/* Zona messaggi */
+.content-center,
 .content-center h2,
 .content-center p {
     text-align: center;
+}
+
+/* navbar */
+.navbar {
+    border-bottom: 2px solid #dfe4ea;
 }
 
 /* Form */
@@ -36,6 +48,14 @@ body {
 .container-scansione {
     width: fit-content;
     margin: auto;
+}
+
+/* Tabella (materice) */
+#tableContainer td {
+    text-align: center; 
+    vertical-align: middle;
+    font-size: 12px;
+    font-weight: bold;
 }
 
 /* Modal */
@@ -93,8 +113,8 @@ body {
 
 /* Toast */
 .toast {
-    border: none;
-    box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+    border: 2px solid #dfe4ea;
+    box-shadow: none;
     border-radius: 10px;
     padding-left: 8px;
     padding-right: 8px;
@@ -109,4 +129,35 @@ body {
     font-weight: 500;
     align-self: center;
     margin-bottom: 0;
+}
+
+/* Icone */
+.success-icon {
+    color: #198754;
+}
+.error-icon {
+    color: #dc3545;
+}
+
+/* Busy full-screen */
+.fullscreen-loader {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    z-index: 9999;
+}
+.fullscreen-loader .spinner-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: rgb(13, 110, 253);
+}
+.fullscreen-loader .spinner-container .spinner-border {
+    width: 3rem;
+    height: 3rem;
 }

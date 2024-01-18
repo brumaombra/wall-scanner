@@ -5,18 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wall Scanner</title>
-    <link rel="stylesheet" href="/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link href="css/all.min.css" rel="stylesheet">
 </head>
 
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg bg-body-tertiary mb-5">
         <div class="container">
-            <a class="navbar-brand" href="#">Wall Scanner</a>
+            <a class="navbar-brand" href="#"><i class="fa-solid fa-barcode me-2"></i>Wall Scanner</a>
             <div class="me-auto"></div>
-            <button id="newReadButton" type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#newReadModal">Nuova scansione</button>
-            <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#settingsModal">Impostazioni</button>
+            <button id="newReadButton" type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#newReadModal"><i class="fa-solid fa-expand me-2"></i>Nuova scansione</button>
+            <button id="settingsButton" type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#settingsModal" title="Impostazioni"><i class="fa-solid fa-gear"></i></button>
         </div>
     </nav>
 
@@ -34,7 +35,7 @@
 
                 <!-- Logo success -->
                 <div id="successReadLogo" class="success-message-object hidden">
-                    <img src="/img/green-checkmark.svg" class="success-green-tick" />
+                    <i class="fa-solid fa-circle-check success-icon fs-40 me-3"></i>
                     <h3>Scansione terminata!</h3>
                 </div>
             </div>
@@ -46,6 +47,7 @@
 
         <!-- Placeholder -->
         <div id="scansionePlaceholder" class="content-center">
+            <i class="fa-solid fa-barcode fs-60 mb-3"></i>
             <h2>Fai la tua prima scansione!</h2>
             <p>Usa il pulsante <b>Nuova scansione</b> per cominciare una nuova scansione!</p>
         </div>
@@ -56,7 +58,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h1 class="modal-title fs-5">Impostazioni</h1>
+                    <h1 class="modal-title fs-5"><i class="fa-solid fa-gear me-2"></i>Impostazioni</h1>
                 </div>
                 <div class="modal-body">
                     <!-- Risoluzione della scansione -->
@@ -70,6 +72,17 @@
                             <option value="5">5 cm</option>
                         </select>
                         <div class="form-text">La risoluzione in cm della scansione</div>
+                    </div>
+
+                    <!-- Valori intensità -->
+                    <div class="mb-3">
+                        <label class="form-label">Valori intensità</label>
+                        <select id="settingsValues" class="form-select form-select-lg">
+                            <option selected value="">Nessuno</option>
+                            <option value="MAG">Magnetismo</option>
+                            <option value="NORM">Mag. normalizzato</option>
+                        </select>
+                        <div class="form-text">L'intensità del segnale</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -85,7 +98,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h1 class="modal-title fs-5">Nuova scansione</h1>
+                    <h1 class="modal-title fs-5"><i class="fa-solid fa-expand me-2"></i>Nuova scansione</h1>
                 </div>
                 <div class="modal-body">
                     <p class="mb-0">Avviare la scansione?</p>
@@ -102,18 +115,27 @@
     <div id="settingsSuccessToast" class="toast align-items-center bottom-0 end-0 mb-4 me-4 position-absolute" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body d-flex">
-                <img src="/img/green-checkmark.svg" class="success-green-tick-toast" />
+                <i class="fa-solid fa-circle-check success-icon fs-25 me-2"></i>
                 <p>Impostazioni salvate!</p>
             </div>
             <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     </div>
 
+    <!-- Busy -->
+    <div id="fullScreenBusy" class="fullscreen-loader">
+        <div class="spinner-container">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Script -->
-    <script src="/js/jquery-3.7.1.min.js"></script>
-    <script src="/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/rainbowVis.min.js"></script>
-    <script src="/js/script.js"></script>
+    <script src="js/jquery-3.7.1.min.js"></script>
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="js/rainbowVis.min.js"></script>
+    <script src="js/script.js"></script>
 </body>
 
 </html>

@@ -2,7 +2,8 @@
 const tableCellWidth = "30px";
 const tableCellHeight = "30px";
 const tableCellBorder = "1px solid #34495e";
-const ESP32IP = ""; // "http://localhost:3000"
+const ESP32IP = "http://localhost:3000"; // "http://localhost:3000"
+let valuesVisible = "MAG"; // Visibilità dei valori di magnetismo ("", "MAG", "NORM")
 
 // Documento pronto
 $(document).ready(() => {
@@ -22,7 +23,7 @@ const getConfuguration = () => {
         success: response => {
             $("#settingsResolution").val(response.resolution || "3"); // Imposto risoluzione scansione
         }, error: error => {
-            console.error(error);
+            console.log(error);
         }
     });
 };
@@ -34,17 +35,21 @@ const handleSaveSettingsPress = () => {
     };
 
     // Chiamata
+    setBusy(true); // Busy on
     $.ajax({
         url: `${ESP32IP}/settings`,
         type: "POST",
         contentType: "application/json",
         data: JSON.stringify(settings),
         success: response => {
+            setBusy(false); // Busy off
+            valuesVisible = $("#settingsValues").val(); // Salvo impostazione visibilità valori
             $("#settingsSuccessToast").toast({
                 delay: 2000
             }).toast("show");
         }, error: error => {
-            console.error(error);
+            setBusy(false); // Busy off
+            console.log(error);
         }
     });
 };
@@ -57,6 +62,7 @@ const handleNewReadPress = () => {
     $("#scansionePlaceholder").addClass("hidden"); // Nascondo container
     $("#scansioneContainer").removeClass("hidden"); // Visualizzo container
     $("#newReadButton").prop("disabled", true); // Disabilito il pulsante
+    $("#settingsButton").prop("disabled", true); // Disabilito il pulsante
     $("#recordingLogo").removeClass("hidden"); // Visualizzo logo recording
     $("#successReadLogo").addClass("hidden"); // Nascondo messaggio success
     $("#newReadModal").modal("hide"); // Chiudo il modal
@@ -72,6 +78,7 @@ const pollingRead = () => {
                 if (response.status === "done") { // Controllo se terminare il polling
                     clearInterval(polling); // Termino il polling
                     $("#newReadButton").prop("disabled", false); // Abilito il pulsante
+                    $("#settingsButton").prop("disabled", false); // Abilito il pulsante
                     $("#recordingLogo").addClass("hidden"); // Nascondo logo recording
                     $("#successReadLogo").removeClass("hidden"); // Visualizzo messaggio success
                     return;
@@ -80,7 +87,7 @@ const pollingRead = () => {
                 // Parsing del CSV
                 parseCSV(response.data);
             }, error: error => {
-                console.error(error);
+                console.log(error);
             }
         });
     }, 1000); // Ogni secondo
@@ -94,7 +101,7 @@ const parseCSV = text => {
         reference = parseFloat(rows[0]); // Valore di riferimento
         rows.shift(); // Rimuovo header con valore di riferimento
     } catch (e) {
-        console.error("Errore durante la pulizia e suddivisione del CSV:", e);
+        console.log("Errore durante la pulizia e suddivisione del CSV:", e);
         return;
     }
 
@@ -109,7 +116,7 @@ const parseCSV = text => {
         leftSeries = distanceFromReference.filter(item => item.difference < 0); // Minori di 0 => Serie di sinistra (Blu)
         rightSeries = distanceFromReference.filter(item => item.difference >= 0); // Maggiori di 0 => Serie di destra (Rosso)
     } catch (e) {
-        console.error("Errore durante il calcolo di massimi, minimi e differenze:", e);
+        console.log("Errore durante il calcolo di massimi, minimi e differenze:", e);
         return;
     }
 
@@ -118,7 +125,7 @@ const parseCSV = text => {
         leftSeries = normalizeSerires(leftSeries); // Normalizzo la serie di sinistra
         rightSeries = normalizeSerires(rightSeries); // Normalizzo la serie di destra
     } catch (e) {
-        console.error("Errore durante la normalizzazione delle serie:", e);
+        console.log("Errore durante la normalizzazione delle serie:", e);
         return;
     }
 
@@ -131,7 +138,7 @@ const parseCSV = text => {
         rainbowRed.setNumberRange(1, 100);
         rainbowRed.setSpectrum("white", "red");
     } catch (e) {
-        console.error("Errore durante la creazione degli oggetti Rainbow:", e);
+        console.log("Errore durante la creazione degli oggetti Rainbow:", e);
     }
 
     // Ciclo le righe e creo mapping
@@ -150,10 +157,10 @@ const parseCSV = text => {
             }
 
             // Aggiungo a mapping
-            dataMap.set(`${x},${y}`, `#${color}`);
+            dataMap.set(`${x},${y}`, { color: `#${color}`, mag: mag, magNorm: magNorm });
         });
     } catch (e) {
-        console.error("Errore durante la creazione del mapping:", e);
+        console.log("Errore durante la creazione del mapping:", e);
     }
 
     // Creo e aggiungo tabella alla view
@@ -164,7 +171,7 @@ const parseCSV = text => {
         tableContainer.innerHTML = ""; // Pulisco il contenuto esistente
         tableContainer.appendChild(table); // Aggiungo la nuova tabella
     } catch (e) {
-        console.error("Errore durante la creazione della tabella:", e);
+        console.log("Errore durante la creazione della tabella:", e);
     }
 };
 
@@ -190,8 +197,13 @@ const createTable = (width, height, dataMap) => {
             td.style.width = tableCellWidth;
             td.style.height = tableCellHeight;
             const key = `${x},${y}`;
-            if (dataMap.has(key))
-                td.style.backgroundColor = dataMap.get(key); // Prendo colore
+            if (dataMap.has(key)) {
+                td.style.backgroundColor = dataMap.get(key).color; // Prendo colore
+                if (valuesVisible !== "") { // Se impostazione attiva, aggiungo valori
+                    td.style.color = getContrastColor(td.style.backgroundColor); // Prendo bianco o nero
+                    td.textContent = valuesVisible === "MAG" ? parseInt(dataMap.get(key).mag) : dataMap.get(key).magNorm; // Prendo il valore
+                }
+            }
             tr.appendChild(td);
         }
         table.appendChild(tr);
@@ -248,4 +260,19 @@ const getColorAverage = (x, y, rows) => {
     }
 
     if (count > 0) return `rgb(${Math.round(r / count)}, ${Math.round(g / count)}, ${Math.round(b / count)})`;
+};
+
+// Calcola il colore con contrasto elevato
+const getContrastColor = bgColor => {
+    const [r, g, b] = bgColor.match(/\d+/g).map(Number); // Prendo R, G e B
+    const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; // Calcolo la luminosità
+    return luminance > 0.5 ? "#000000" : "#FFFFFF"; // Bianco o nero
+};
+
+// Busy
+const setBusy = busy => {
+    if (busy)
+        $("#fullScreenBusy").fadeIn(100);
+    else
+        $("#fullScreenBusy").fadeOut(100);
 };
