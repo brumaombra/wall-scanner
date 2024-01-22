@@ -1,109 +1,3 @@
-/*
-#include <WiFi.h>
-#include <WebServer.h>
-#include <SPIFFS.h>
-#include <ArduinoJson.h>
-
-const char *ssid = "Wall-Scanner";
-WebServer server(80);
-int resolution = 1;
-
-// Spezzo il file e mando il contenuto al client
-void splitAndSend(const char* path, const char* type) {
-    File file = SPIFFS.open(path, "r");
-    if (!file) { // Controllo se il file è stato caricato correttamente
-        server.send(500, "text/plain", "Errore interno del server");
-        return;
-    }
-
-    // Spezzo il file e mando
-    server.setContentLength(file.size());
-    server.send(200, type, "");
-    const size_t bufferSize = 1024;
-    char buffer[bufferSize];
-    while (file.available()) {
-        size_t len = file.readBytes(buffer, bufferSize);
-        server.sendContent_P(buffer, len);
-    }
-    file.close(); // Chiudo il file
-}
-
-// faccio partire il server web
-void setServerWeb() {
-    if (!SPIFFS.begin(true)) { // Inizializzo SPIFFS
-        Serial.println("Errore nell'inizializzazione di SPIFFS");
-        return;
-    }
-
-    // Configuro l'ESP come Access Point
-    WiFi.softAP(ssid);
-
-    // Routes file
-    server.on("/", HTTP_GET, []() {
-        splitAndSend("/index.html", "text/html");
-    });
-    server.on("/css/bootstrap.min.css", HTTP_GET, []() {
-        splitAndSend("/css/bootstrap.min.css", "text/css");
-    });
-    server.on("/css/style.css", HTTP_GET, []() {
-        splitAndSend("/css/style.css", "text/css");
-    });
-    server.on("/js/bootstrap.bundle.min.js", HTTP_GET, []() {
-        splitAndSend("/js/bootstrap.bundle.min.js", "text/javascript");
-    });
-    server.on("/js/jquery-3.7.1.min.js", HTTP_GET, []() {
-        splitAndSend("/js/jquery-3.7.1.min.js", "text/javascript");
-    });
-    server.on("/js/rainbowVis.min.js", HTTP_GET, []() {
-        splitAndSend("/js/rainbowVis.min.js", "text/javascript");
-    });
-    server.on("/js/script.js", HTTP_GET, []() {
-        splitAndSend("/js/script.js", "text/javascript");
-    });
-    server.on("/img/green-checkmark.svg", HTTP_GET, []() {
-        splitAndSend("/img/green-checkmark.svg", "image/svg+xml");
-    });
-
-    // Routes servizi
-    server.on("/settings", HTTP_GET, []() {
-        JsonDocument doc;
-        doc["resolution"] = resolution;
-        String json;
-        serializeJson(doc, json);
-        server.send(200, "application/json", json);
-    });
-    server.on("/settings", HTTP_POST, []() {
-        String body = server.arg("plain");
-        JsonDocument doc;
-        DeserializationError error = deserializeJson(doc, body);
-        if (error) { // Controllo se il formato JSON è corretto
-            server.send(400, "text/plain", "Errore nel formato JSON");
-            return;
-        }
-
-        resolution = doc["resolution"]; // Sovrascrivo risoluzione
-        doc["resolution"] = resolution; // Mando la variabile aggiornata al front-end
-        String json;
-        serializeJson(doc, json);
-        server.send(200, "application/json", json);
-    });
-
-    // Avviare il server
-    server.begin();
-}
-
-// Setup
-void setup() {
-    Serial.begin(115200);
-    setServerWeb(); // Faccio partire il server web
-}
-
-// Loop
-void loop() {
-    server.handleClient();
-}
-*/
-
 // codice per leggere il tempo che intercorre tra un fronte e l'altro dei
 // segnali del metal detector quando una certa distanza ? stata misurata con il
 // mouse ottico codice per ESP32 V2.2 il clock dell'ESP32 di default ? 240MHz
@@ -129,11 +23,14 @@ void loop() {
 // misura al centro del pixel quadrato e dimensione pixel parametrizzabile
 
 #include <Arduino.h>
+#include <WiFi.h>
+#include <LittleFS.h>
+#include <ArduinoJson.h>
+#include <ESPAsyncWebServer.h>
 #include <PS2MouseHandler.h>
 
 #define MOUSE_DATA 18
 #define MOUSE_CLOCK 5
-PS2MouseHandler mouse(MOUSE_CLOCK, MOUSE_DATA, PS2_MOUSE_REMOTE);
 #define TXPIN 21
 #define RXPIN 19
 #define REDLED 23
@@ -146,6 +43,7 @@ PS2MouseHandler mouse(MOUSE_CLOCK, MOUSE_DATA, PS2_MOUSE_REMOTE);
 #define YELLCH 1
 
 // Variabili globali
+PS2MouseHandler mouse(MOUSE_CLOCK, MOUSE_DATA, PS2_MOUSE_REMOTE); // Istanza mouse
 unsigned int stato = 0; // Stato switch
 volatile unsigned long timerCounter = 0;
 volatile float delta = 0;
@@ -163,6 +61,8 @@ byte NCM = 3; // Numero di cm ogni quanto fare una misura
 bool first = true; // Per capire se è la prima iterazione
 bool firstPython = true;
 bool OKXY = true; // Per capire se ho già misurato in un certo pixel
+const char *accessPointSSID = "Wall-scanner"; // SSID access point
+AsyncWebServer server(80); // Server web
 
 // Start timer
 void IRAM_ATTR startTimer() {
@@ -202,30 +102,6 @@ void LedPWM() {
     }
 }
 
-/* Stampa python
-void stampaPython(int X, int Y, float mag) {
-    if (firstPython) {
-        firstPython = false;
-        i = 0;
-        Serial.print("dati = [");
-    }
-
-    Serial.print("((");
-    Serial.print(X);
-    Serial.print(", ");
-    Serial.print(Y);
-    Serial.print("), ");
-    Serial.print(int((mag * 8) - 140));
-    Serial.print("), ");
-    i++;
-
-    if (i = 3) {
-        i = 0;
-        Serial.println(" ");
-    }
-}
-*/
-
 // Stampo valori
 void stampaNormale(int X, int Y, float mag) {
     Serial.print(X);
@@ -259,10 +135,50 @@ void LEDUpDown(float Ycm, int Yprec) {
     }
 }
 
-// Setup
-void setup() {
-    noInterrupts();
-    Serial.begin(115200);
+// Setup LittleFS
+bool setupLittleFS() {
+	if (!LittleFS.begin()) { // Check if LittleFS is mounted
+		Serial.println("Errore durante la configurazione di LittleFS");
+		return false;
+	} else {
+		return true;
+	}
+}
+
+// faccio partire il server web
+void setupServer() {
+    server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html"); // Serve web page
+	server.onNotFound([](AsyncWebServerRequest *request) { // Error handling
+		request->send(404); // Page not found
+	});
+
+    // Prendo le impostazioni
+	server.on("/getSettings", HTTP_GET, [](AsyncWebServerRequest *request) {
+        JsonDocument doc;
+        doc["resolution"] = NCM; // Risoluzione scansione
+        String json;
+        serializeJson(doc, json);
+		request->send(200, "application/json", json); // Mando risposta
+    });
+
+    // Salvo le impostazioni
+	server.on("/setSettings", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String resolution = request->getParam("resolution")->value();
+        NCM = resolution.toInt(); // Sovrascrivo risoluzione
+        JsonDocument doc;
+        doc["resolution"] = NCM; // Mando la variabile aggiornata al front-end
+        String json;
+        serializeJson(doc, json);
+        request->send(200, "application/json", json); // Mando risposta
+    });
+
+    // Avvio il server e access point
+    server.begin(); // Avvio il server web
+    WiFi.softAP(accessPointSSID); // Configuro l'ESP come access point
+}
+
+// Set dei pin
+void setupPin() {
     pinMode(BUTTON, INPUT_PULLUP);
     pinMode(TXPIN, INPUT);
     pinMode(RXPIN, INPUT);
@@ -275,8 +191,26 @@ void setup() {
     ledcAttachPin(REDLED, REDCH);
     ledcSetup(YELLCH, 1000, 8);
     ledcAttachPin(GREENLED, YELLCH);
-    if (mouse.initialise() != 0) // Mouse error
-        Serial.println("mouse error");
+}
+
+// Setup mouse
+bool setupMouse() {
+    if (mouse.initialise() != 0) { // Errore mouse
+        Serial.println("Errore mouse");
+        return false;
+    } else {
+        return true;
+    }
+}
+
+// Setup
+void setup() {
+    noInterrupts();
+    Serial.begin(115200); // Inizializzo la seriale
+    setupLittleFS(); // Setup LittleFS
+    setupServer(); // Setup server web
+    setupPin(); // Setup dei pin
+    setupMouse(); // Setup del mouse
     interrupts();
 }
 

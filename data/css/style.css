@@ -29,6 +29,8 @@ body {
 }
 .form-select {
     border-radius: 12px;
+    height: 48px;
+    padding-left: 1rem;
 }
 
 /* Pulsanti */

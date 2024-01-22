@@ -2,8 +2,8 @@
 const tableCellWidth = "30px";
 const tableCellHeight = "30px";
 const tableCellBorder = "1px solid #34495e";
-const ESP32IP = "http://localhost:3000"; // "http://localhost:3000"
-let valuesVisible = "MAG"; // Visibilità dei valori di magnetismo ("", "MAG", "NORM")
+const ESP32IP = ""; // "http://localhost:3000"
+let valuesVisible = ""; // Visibilità dei valori di magnetismo ("", "MAG", "NORM")
 
 // Documento pronto
 $(document).ready(() => {
@@ -17,40 +17,32 @@ const init = () => {
 
 // Prendo la configurazione iniziale
 const getConfuguration = () => {
-    $.ajax({
-        url: `${ESP32IP}/settings`,
-        type: "GET",
-        success: response => {
-            $("#settingsResolution").val(response.resolution || "3"); // Imposto risoluzione scansione
-        }, error: error => {
-            console.log(error);
-        }
+    fetch(`${ESP32IP}/getSettings`).then(response => {
+        return response.json(); // Prendo il JSON
+    }).then(data => {
+        $("#settingsResolution").val(data.resolution || "3"); // Imposto risoluzione scansione
+    }).catch(error => {
+        console.log(error);
     });
 };
 
 // Salvo le impostazioni
 const handleSaveSettingsPress = () => {
-    const settings = { // Oggetto impostazioni
-        resolution: $("#settingsResolution").val()
-    };
-
-    // Chiamata
     setBusy(true); // Busy on
-    $.ajax({
-        url: `${ESP32IP}/settings`,
-        type: "POST",
-        contentType: "application/json",
-        data: JSON.stringify(settings),
-        success: response => {
-            setBusy(false); // Busy off
-            valuesVisible = $("#settingsValues").val(); // Salvo impostazione visibilità valori
-            $("#settingsSuccessToast").toast({
-                delay: 2000
-            }).toast("show");
-        }, error: error => {
-            setBusy(false); // Busy off
-            console.log(error);
-        }
+    const queryString = new URLSearchParams({ // Creo la query string
+        resolution: $("#settingsResolution").val() || ""
+    }).toString();
+    fetch(`${ESP32IP}/setSettings?${queryString}`).then(response => {
+        return response.json(); // Prendo il JSON
+    }).then(data => {
+        setBusy(false); // Busy off
+        valuesVisible = $("#settingsValues").val(); // Salvo impostazione visibilità valori
+        $("#settingsSuccessToast").toast({
+            delay: 2000
+        }).toast("show");
+    }).catch(error => {
+        setBusy(false); // Busy off
+        console.log(error);
     });
 };
 
