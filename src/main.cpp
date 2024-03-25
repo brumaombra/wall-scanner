@@ -1,27 +1,3 @@
-// codice per leggere il tempo che intercorre tra un fronte e l'altro dei
-// segnali del metal detector quando una certa distanza ? stata misurata con il
-// mouse ottico codice per ESP32 V2.2 il clock dell'ESP32 di default ? 240MHz
-// ATTENZIONE! Se il mouse non ? collegato e/o non ? propriamente alimentato, il
-// codice si blocca nel setup aspettando che il mouse risponda per l'ESP32,
-// quando richiama una funzione da interrupt, questa deve essere precaricata in
-// RAM tramite l'attributo IRAM_ATTR (invece che ICACHE_RAM_ATTR per ESP826)
-// coefficiente per mouse: 0.01151
-// esempio di testo per creare un'immagine con python:
-// dati = [((0, 0), 255), ((1, 0), 128), ((2, 0), 0),
-//         ((0, 1), 0), ((1, 1), 64), ((2, 1), 255)]
-// misura al centro del pixel quadrato e dimensione pixel parametrizzabile
-
-// codice per leggere il tempo che intercorre tra un fronte e l'altro dei segnali del metal detector quando una certa distanza ? stata misurata con il mouse ottico
-// codice per ESP32 V2.2
-// il clock dell'ESP32 di default ? 240MHz
-// ATTENZIONE! Se il mouse non ? collegato e/o non ? propriamente alimentato, il codice si blocca nel setup aspettando che il mouse risponda
-// per l'ESP32, quando richiama una funzione da interrupt, questa deve essere precaricata in RAM tramite l'attributo IRAM_ATTR (invece che ICACHE_RAM_ATTR per ESP826)
-// coefficiente per mouse: 0.01151
-// esempio di testo per creare un'immagine con python:
-// dati = [((0, 0), 255), ((1, 0), 128), ((2, 0), 0),
-//        ((0, 1), 0), ((1, 1), 64), ((2, 1), 255)]
-// misura al centro del pixel quadrato e dimensione pixel parametrizzabile
-
 #include <Arduino.h>
 #include <WiFi.h>
 #include <LittleFS.h>
@@ -66,22 +42,34 @@ AsyncWebServer server(80); // Server web
 
 // Start timer
 void IRAM_ATTR startTimer() {
-    noInterrupts();
+    // detachAllInterrupts();
     if (!timerRunning) { // Se il timer non è attivo, azzero il contatore
         timerCounter = ESP.getCycleCount();
         timerRunning = true;
     }
-    interrupts();
+    // attachAllInterrupts();
 }
 
 // Stop timer 
 void IRAM_ATTR stopTimer() {
     if (timerRunning) {
         elapsedTime = ESP.getCycleCount() - timerCounter;
-        noInterrupts();
+        // detachAllInterrupts();
         timerRunning = false;
         printed = false;
     }
+}
+
+// Attivo gli interrupt
+void attachAllInterrupts() {
+    attachInterrupt(TXPIN, startTimer, RISING);
+    attachInterrupt(RXPIN, stopTimer, FALLING);
+}
+
+// Disabilito gli interrupt
+void detachAllInterrupts() {
+    detachInterrupt(TXPIN);
+    detachInterrupt(RXPIN);
 }
 
 // PWM per i LED
@@ -146,7 +134,7 @@ bool setupLittleFS() {
 }
 
 // faccio partire il server web
-void setupServer() {
+bool setupServer() {
     server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html"); // Serve web page
 	server.onNotFound([](AsyncWebServerRequest *request) { // Error handling
 		request->send(404); // Page not found
@@ -172,9 +160,11 @@ void setupServer() {
         request->send(200, "application/json", json); // Mando risposta
     });
 
-    // Avvio il server e access point
+    // Avvio access point e server
+    if (!WiFi.softAP(accessPointSSID)) // Configuro l'ESP come access point
+        return false; // Errore
     server.begin(); // Avvio il server web
-    WiFi.softAP(accessPointSSID); // Configuro l'ESP come access point
+    return true; // Tutto OK
 }
 
 // Set dei pin
@@ -205,13 +195,14 @@ bool setupMouse() {
 
 // Setup
 void setup() {
-    noInterrupts();
     Serial.begin(115200); // Inizializzo la seriale
     setupLittleFS(); // Setup LittleFS
     setupServer(); // Setup server web
     setupPin(); // Setup dei pin
     setupMouse(); // Setup del mouse
-    interrupts();
+    Serial.println("Attivo gli interrupt...");
+    attachAllInterrupts();
+    Serial.println("Tutto OK");
 }
 
 // Loop
@@ -222,8 +213,7 @@ void loop() {
                 first = true;
                 Serial.println("Pulsante premuto!");
                 stato = 1;
-                attachInterrupt(TXPIN, startTimer, RISING);
-                attachInterrupt(RXPIN, stopTimer, FALLING);
+                attachAllInterrupts(); // Attivo interrupt
             }
             break;
 
@@ -254,7 +244,7 @@ void loop() {
                 stato = 2;
                 Serial.println("----------");
             }
-            interrupts();
+            attachAllInterrupts();
             break;
 
         case 2: // Taro il delay
@@ -277,13 +267,13 @@ void loop() {
                     stato = 3;
                 }
             }
-            interrupts();
+            attachAllInterrupts();
             break;
 
         case 3: // Controllo se mi sono mosso
             if (first) {
                 first = false;
-                noInterrupts();
+                detachAllInterrupts();
             }
 
             if (millis() - prevMillis > 200) {
@@ -304,7 +294,7 @@ void loop() {
                 if ((Xcm - int(Xcm / NCM) * NCM > float(NCM) / 3) && (Xcm - int(Xcm / NCM) * NCM < float(NCM) * 2 / 3) && OKXY) {
                     OKXY = false;
                     stato = 4;
-                    interrupts();
+                    attachAllInterrupts();
                 }
             }
             break;
