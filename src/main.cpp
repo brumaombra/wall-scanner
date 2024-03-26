@@ -1,3 +1,25 @@
+/*
+
+----------- WORKFLOW -----------
+1. Accendo l'ESP
+2. ESP pronto
+3. Mi collego al WiFi
+4. Parte il polling per capire cosa sta facendo l'ESP
+5. La pagina web si sincronizza con l'ESP
+
+Stati lettura:
+- READY: l'ESP è in attesa di far partire una scansione
+- SCANNING: La scansione è in corso
+- ENDED: Scansione terminata
+
+----------- WORKFLOW PAGINA WEB -----------
+1. Parte il polling
+    1a. Se la scansione non è ancora partita faccio vedere una pagina web che dice di premere il pulsante sull'ESP
+    1b. Se la scansione è già in corso mi sincronizzo e faccio vedere la heath map
+    1c. Se la scansione è terminata faccio vedere il risultato
+
+*/
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <LittleFS.h>
@@ -21,6 +43,8 @@
 // Variabili globali
 PS2MouseHandler mouse(MOUSE_CLOCK, MOUSE_DATA, PS2_MOUSE_REMOTE); // Istanza mouse
 unsigned int stato = 0; // Stato switch
+enum scanStatus { READY = 0, SCANNING = 1, ENDED = 2 }; // Stati della scansione
+scanStatus currentScanStatus = READY; // Stato della scansione
 volatile unsigned long timerCounter = 0;
 volatile float delta = 0;
 volatile float Fi0 = 29;
@@ -37,7 +61,8 @@ byte NCM = 3; // Numero di cm ogni quanto fare una misura
 bool first = true; // Per capire se è la prima iterazione
 bool firstPython = true;
 bool OKXY = true; // Per capire se ho già misurato in un certo pixel
-const char *accessPointSSID = "Wall-scanner"; // SSID access point
+const char accessPointSSID[] = "Wall-scanner"; // SSID access point
+char csvString[1000] = ""; // Stringa per salvare i dati registrati
 AsyncWebServer server(80); // Server web
 
 // Start timer
@@ -78,12 +103,10 @@ void LedPWM() {
         ledcWrite(REDCH, 10 * (delta - (Fi0 + soglia)));
         ledcWrite(YELLCH, 0);
     }
-
     if (delta < Fi0 - soglia) {
         ledcWrite(YELLCH, 30 * (Fi0 - soglia - delta));
         ledcWrite(REDCH, 0);
     }
-
     if ((delta > Fi0 - soglia) && (delta < Fi0 + soglia)) {
         ledcWrite(REDCH, 0);
         ledcWrite(YELLCH, 0);
@@ -97,6 +120,13 @@ void stampaNormale(int X, int Y, float mag) {
     Serial.print(Y);
     Serial.print(",");
     Serial.println(mag, 1);
+}
+
+// Creo la string CSV
+void writeCsv(int X, int Y, float mag) {
+    char tempBuffer[30];
+    sprintf(tempBuffer, "%d,%d,%.1f;", X, Y, mag);
+    strcat(csvString, tempBuffer);
 }
 
 // Gestisco LED per direzione scansione
@@ -144,8 +174,9 @@ bool setupServer() {
 	server.on("/getSettings", HTTP_GET, [](AsyncWebServerRequest *request) {
         JsonDocument doc;
         doc["resolution"] = NCM; // Risoluzione scansione
-        String json;
-        serializeJson(doc, json);
+        size_t jsonLength = measureJson(doc) + 1; // Grandezza del documento JSON
+		char json[jsonLength];
+		serializeJson(doc, json, sizeof(json));
 		request->send(200, "application/json", json); // Mando risposta
     });
 
@@ -155,10 +186,49 @@ bool setupServer() {
         NCM = resolution.toInt(); // Sovrascrivo risoluzione
         JsonDocument doc;
         doc["resolution"] = NCM; // Mando la variabile aggiornata al front-end
+        size_t jsonLength = measureJson(doc) + 1; // Grandezza del documento JSON
+		char json[jsonLength];
+		serializeJson(doc, json, sizeof(json));
+        request->send(200, "application/json", json); // Mando risposta
+    });
+
+    // Polling per capire cosa sta facendo l'ESP
+	server.on("/readScan", HTTP_GET, [](AsyncWebServerRequest *request) {
+        JsonDocument doc;
+        doc["status"] = currentScanStatus; // Stato lettura
+        doc["data"] = csvString; // Stringa CSV completa
+        size_t jsonLength = measureJson(doc) + 1; // Grandezza del documento JSON
+		char json[jsonLength];
+		serializeJson(doc, json, sizeof(json));
+		request->send(200, "application/json", json); // Mando risposta
+    });
+
+    /* Faccio partire la scansione
+    server.on("/startScan", HTTP_GET, [](AsyncWebServerRequest *request) {
+        attachAllInterrupts(); // Attivo interrupt
+        stato = 1; // Stato switch
+        Serial.println("Scansione avviata...");
+        JsonDocument doc;
+        doc["status"] = "OK"; // Success
         String json;
         serializeJson(doc, json);
         request->send(200, "application/json", json); // Mando risposta
     });
+    */
+
+    /* Fermo la scansione
+    server.on("/stopScan", HTTP_GET, [](AsyncWebServerRequest *request) {
+        detachAllInterrupts(); // Disabilito interrupt
+        stato = 0; // Stato switch
+        csvString[0] = '\0'; // Pulisco stringa CSV
+        Serial.println("Scansione fermata...");
+        JsonDocument doc;
+        doc["status"] = "OK"; // Success
+        String json;
+        serializeJson(doc, json);
+        request->send(200, "application/json", json); // Mando risposta
+    });
+    */
 
     // Avvio access point e server
     if (!WiFi.softAP(accessPointSSID)) // Configuro l'ESP come access point
@@ -200,15 +270,14 @@ void setup() {
     setupServer(); // Setup server web
     setupPin(); // Setup dei pin
     setupMouse(); // Setup del mouse
-    Serial.println("Attivo gli interrupt...");
-    attachAllInterrupts();
-    Serial.println("Tutto OK");
+    Serial.println("Setup OK");
 }
 
 // Loop
 void loop() {
     switch (stato) {
-        case 0:
+        case 0: // Stato iniziale
+            currentScanStatus = READY; // Setto stato READY
             if (!digitalRead(BUTTON)) {
                 first = true;
                 Serial.println("Pulsante premuto!");
@@ -309,7 +378,9 @@ void loop() {
                 } else {
                     i = 0;
                     delta = delta / 501;
-                    stampaNormale(int(Xcm / NCM), int(Ycm / NCM), delta);
+                    stampaNormale(int(Xcm / NCM), int(Ycm / NCM), delta); // Stampo valori su seriale
+                    currentScanStatus = SCANNING; // Setto stato SCANNING
+                    writeCsv(int(Xcm / NCM), int(Ycm / NCM), delta); // Aggiungo al CSV
                     printed = true;
                     LedPWM();
                     stato = 5;
@@ -320,9 +391,6 @@ void loop() {
 
         case 5:
             stato = 3;
-            break;
-
-        case 6:
             break;
     }
 }

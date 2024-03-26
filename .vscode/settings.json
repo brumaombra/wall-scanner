@@ -11,5 +11,6 @@
         "regex": "cpp",
         "bitset": "cpp",
         "algorithm": "cpp"
-    }
+    },
+    "cmake.configureOnOpen": false
 }

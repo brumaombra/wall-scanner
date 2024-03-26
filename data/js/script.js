@@ -4,6 +4,8 @@ const tableCellHeight = "30px";
 const tableCellBorder = "1px solid #34495e";
 const ESP32IP = ""; // "http://localhost:3000"
 let valuesVisible = ""; // Visibilità dei valori di magnetismo ("", "MAG", "NORM")
+const scanStatus = { READY: 0, SCANNING: 1, ENDED: 2 }; // Stato della scansione
+let currentStatus = scanStatus.READY; // Stato attuale della scansione
 
 // Documento pronto
 $(document).ready(() => {
@@ -13,6 +15,7 @@ $(document).ready(() => {
 // Funzione init
 const init = () => {
     getConfuguration(); // Prendo la configurazione iniziale
+    pollingRead(); // Inizio polling
 };
 
 // Prendo la configurazione iniziale
@@ -48,41 +51,61 @@ const handleSaveSettingsPress = () => {
 
 /*********************************** Creazione della heatmap ***********************************/
 
-// Click del pulsante
-const handleNewReadPress = () => {
-    pollingRead(); // Inizio polling
-    $("#scansionePlaceholder").addClass("hidden"); // Nascondo container
-    $("#scansioneContainer").removeClass("hidden"); // Visualizzo container
-    $("#newReadButton").prop("disabled", true); // Disabilito il pulsante
-    $("#settingsButton").prop("disabled", true); // Disabilito il pulsante
-    $("#recordingLogo").removeClass("hidden"); // Visualizzo logo recording
-    $("#successReadLogo").addClass("hidden"); // Nascondo messaggio success
-    $("#newReadModal").modal("hide"); // Chiudo il modal
-};
-
 // Start della lettura (polling)
 const pollingRead = () => {
-    let polling = setInterval(() => {
+    const polling = setInterval(() => {
         $.ajax({
-            url: `${ESP32IP}/read`,
+            url: `${ESP32IP}/readScan`,
             type: "GET",
             success: response => {
-                if (response.status === "done") { // Controllo se terminare il polling
-                    clearInterval(polling); // Termino il polling
-                    $("#newReadButton").prop("disabled", false); // Abilito il pulsante
-                    $("#settingsButton").prop("disabled", false); // Abilito il pulsante
-                    $("#recordingLogo").addClass("hidden"); // Nascondo logo recording
-                    $("#successReadLogo").removeClass("hidden"); // Visualizzo messaggio success
-                    return;
+                switch (response.status) {
+                    case scanStatus.READY: // L'ESP è in attesa di iniziare una scansione
+                        manageStatusReady(response);
+                        break;
+                    case scanStatus.SCANNING: // L'ESP sta eseguendo una scansione
+                        manageStatusScanning(response);
+                        break;
+                    case scanStatus.ENDED: // L'ESP ha terminato una scansione
+                        manageStatusEnded(response);
+                        break;
                 }
-
-                // Parsing del CSV
-                parseCSV(response.data);
             }, error: error => {
                 console.log(error);
             }
         });
     }, 1000); // Ogni secondo
+};
+
+// Gestione dello stato READY
+const manageStatusReady = response => {
+    if (response.status === this.currentStatus) return; // Se è già uguale esco
+    this.currentStatus = response.status || scanStatus.READY; // Aggiorno stato
+    $("#settingsButton").prop("disabled", false); // Abilito il pulsante
+    $("#scansionePlaceholder").removeClass("hidden"); // Visualizzo placeholder
+    $("#scansioneContainer").addClass("hidden"); // Nascondo container scansione
+};
+
+// Gestione dello stato SCANNING
+const manageStatusScanning = response => {
+    parseCSV(response.data); // Parsing del CSV
+    if (response.status === this.currentStatus) return; // Se è già uguale esco
+    this.currentStatus = response.status || scanStatus.READY; // Aggiorno stato
+    $("#settingsButton").prop("disabled", true); // Disabilito il pulsante
+    $("#scansionePlaceholder").addClass("hidden"); // Nascondo placeholder
+    $("#scansioneContainer").removeClass("hidden"); // Visualizzo container
+    $("#recordingLogo").removeClass("hidden"); // Visualizzo logo recording
+};
+
+// Gestione dello stato ENDED
+const manageStatusEnded = response => {
+    if (response.status === this.currentStatus) return; // Se è già uguale esco
+    this.currentStatus = response.status || scanStatus.READY; // Aggiorno stato
+    parseCSV(response.data); // Parsing del CSV
+    $("#settingsButton").prop("disabled", false); // Abilito il pulsante
+    $("#scansioneContainer").removeClass("hidden"); // Visualizzo container
+    $("#scansionePlaceholder").addClass("hidden"); // Nascondo placeholder
+    $("#recordingLogo").addClass("hidden"); // Nascondo logo recording
+    $("#successReadLogo").removeClass("hidden"); // Visualizzo messaggio success
 };
 
 // Faccio il parsing del CSV
