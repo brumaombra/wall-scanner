@@ -59,8 +59,8 @@ int Xprec = 0, Yprec = 0;
 float Xcm = 0, Ycm = 0;
 byte NCM = 3; // Numero di cm ogni quanto fare una misura
 bool first = true; // Per capire se è la prima iterazione
-bool firstPython = true;
-bool OKXY = true; // Per capire se ho già misurato in un certo pixel
+bool OKXY = true; // Per capire se ho già misurato in un certo 
+bool devMode = true; // Per capire se stampare i valori
 const char accessPointSSID[] = "Wall-scanner"; // SSID access point
 char csvString[1000] = ""; // Stringa per salvare i dati registrati
 AsyncWebServer server(80); // Server web
@@ -156,14 +156,14 @@ void LEDUpDown(float Ycm, int Yprec) {
 // Setup LittleFS
 bool setupLittleFS() {
 	if (!LittleFS.begin()) { // Check if LittleFS is mounted
-		Serial.println("Errore durante la configurazione di LittleFS");
+		if (devMode) Serial.println("Errore durante la configurazione di LittleFS");
 		return false;
 	} else {
 		return true;
 	}
 }
 
-// faccio partire il server web
+// Faccio partire il server web
 bool setupServer() {
     server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html"); // Serve web page
 	server.onNotFound([](AsyncWebServerRequest *request) { // Error handling
@@ -256,7 +256,7 @@ void setupPin() {
 // Setup mouse
 bool setupMouse() {
     if (mouse.initialise() != 0) { // Errore mouse
-        Serial.println("Errore mouse");
+        if (devMode) Serial.println("Errore mouse");
         return false;
     } else {
         return true;
@@ -270,7 +270,7 @@ void setup() {
     setupServer(); // Setup server web
     setupPin(); // Setup dei pin
     setupMouse(); // Setup del mouse
-    Serial.println("Setup OK");
+    if (devMode) Serial.println("Setup OK");
 }
 
 // Loop
@@ -280,7 +280,7 @@ void loop() {
             currentScanStatus = READY; // Setto stato READY
             if (!digitalRead(BUTTON)) {
                 first = true;
-                Serial.println("Pulsante premuto!");
+                if (devMode) Serial.println("Pulsante premuto!");
                 stato = 1;
                 attachAllInterrupts(); // Attivo interrupt
             }
@@ -301,7 +301,7 @@ void loop() {
                 } else {
                     i = 0;
                     delta = delta / 61;
-                    Serial.println(delta, 1);
+                    if (devMode) Serial.println(delta, 1);
                     printed = true;
                     LedPWM();
                     stato = 1;
@@ -311,7 +311,7 @@ void loop() {
             if (!digitalRead(BUTTON)) {
                 first = true;
                 stato = 2;
-                Serial.println("----------");
+                if (devMode) Serial.println("----------");
             }
             attachAllInterrupts();
             break;
@@ -326,9 +326,9 @@ void loop() {
                 } else {
                     i = 0;
                     Fi0 = Fi0 / 5035;
-                    Serial.println(Fi0, 1);
+                    if (devMode) Serial.println(Fi0, 1);
                     delay(1);
-                    Serial.println("----------");
+                    if (devMode) Serial.println("----------");
                     LedPWM();
                     delay(1000);
                     printed = true;
@@ -378,7 +378,7 @@ void loop() {
                 } else {
                     i = 0;
                     delta = delta / 501;
-                    stampaNormale(int(Xcm / NCM), int(Ycm / NCM), delta); // Stampo valori su seriale
+                    if (devMode) stampaNormale(int(Xcm / NCM), int(Ycm / NCM), delta); // Stampo valori su seriale
                     currentScanStatus = SCANNING; // Setto stato SCANNING
                     writeCsv(int(Xcm / NCM), int(Ycm / NCM), delta); // Aggiungo al CSV
                     printed = true;
