@@ -113,7 +113,7 @@ const parseCSV = text => {
     let rows, reference;
     try {
         rows = text.split(";").map(row => row.split(","));
-        reference = parseFloat(rows[0]); // Valore di riferimento
+        reference = parseFloat(rows[0] || 0); // Valore di riferimento
         rows = rows.filter(item => item.length === 3); // Prendo solo righe valide (Con i 3 valori)
     } catch (e) {
         console.log("Errore durante la pulizia e suddivisione del CSV:", e);

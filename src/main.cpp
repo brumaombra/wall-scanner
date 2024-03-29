@@ -21,6 +21,7 @@ Stati lettura:
 */
 
 #include <Arduino.h>
+#include <Preferences.h>
 #include <WiFi.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
@@ -64,6 +65,7 @@ bool devMode = true; // Per capire se stampare i valori
 const char accessPointSSID[] = "Wall-scanner"; // SSID access point
 char csvString[1000] = ""; // Stringa per salvare i dati registrati
 AsyncWebServer server(80); // Server web
+Preferences preferences; // Preferenze (Per savare la configurazione)
 
 // Start timer
 void IRAM_ATTR startTimer() {
@@ -170,6 +172,24 @@ bool setupLittleFS() {
 	}
 }
 
+// Leggo la configurazione salvata
+bool readConfig() {
+    preferences.begin("config", false);
+    NCM = preferences.getInt("resolution", NCM); // Risoluzione scansione
+    preferences.end();
+    if (devMode) Serial.print("Configurazione caricata correttamente");
+    return true; // Tutto OK
+}
+
+// Salvo la configurazione
+bool writeConfig() {
+    preferences.begin("config", false);
+    preferences.putInt("resolution", NCM); // Risoluzione scansione
+    preferences.end();
+    if (devMode) Serial.print("Configurazione salvata correttamente");
+    return true; // Tutto OK
+}
+
 // Faccio partire il server web
 bool setupServer() {
     server.serveStatic("/home", LittleFS, "/").setDefaultFile("index.html"); // Serve web page
@@ -194,6 +214,7 @@ bool setupServer() {
 	server.on("/setSettings", HTTP_GET, [](AsyncWebServerRequest *request) {
         String resolution = request->getParam("resolution")->value();
         NCM = resolution.toInt(); // Sovrascrivo risoluzione
+        writeConfig(); // Salvo la configurazione
         JsonDocument doc;
         doc["resolution"] = NCM; // Mando la variabile aggiornata al front-end
         size_t jsonLength = measureJson(doc) + 1; // Grandezza del documento JSON
@@ -212,33 +233,6 @@ bool setupServer() {
 		serializeJson(doc, json, sizeof(json));
 		request->send(200, "application/json", json); // Mando risposta
     });
-
-    /* Faccio partire la scansione
-    server.on("/startScan", HTTP_GET, [](AsyncWebServerRequest *request) {
-        attachAllInterrupts(); // Attivo interrupt
-        stato = 1; // Stato switch
-        Serial.println("Scansione avviata...");
-        JsonDocument doc;
-        doc["status"] = "OK"; // Success
-        String json;
-        serializeJson(doc, json);
-        request->send(200, "application/json", json); // Mando risposta
-    });
-    */
-
-    /* Fermo la scansione
-    server.on("/stopScan", HTTP_GET, [](AsyncWebServerRequest *request) {
-        detachAllInterrupts(); // Disabilito interrupt
-        stato = 0; // Stato switch
-        csvString[0] = '\0'; // Pulisco stringa CSV
-        Serial.println("Scansione fermata...");
-        JsonDocument doc;
-        doc["status"] = "OK"; // Success
-        String json;
-        serializeJson(doc, json);
-        request->send(200, "application/json", json); // Mando risposta
-    });
-    */
 
     // Avvio access point e server
     if (!WiFi.softAP(accessPointSSID)) // Configuro l'ESP come access point
@@ -277,6 +271,7 @@ bool setupMouse() {
 void setup() {
     if (devMode) Serial.begin(115200); // Inizializzo la seriale
     setupLittleFS(); // Setup LittleFS
+    readConfig(); // Leggo configurazione salvata
     setupServer(); // Setup server web
     setupPin(); // Setup dei pin
     setupMouse(); // Setup del mouse
