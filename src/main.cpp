@@ -65,6 +65,8 @@ bool devMode = true; // Per capire se stampare i valori
 const char accessPointSSID[] = "Wall-scanner"; // SSID access point
 char csvString[1000] = ""; // Stringa per salvare i dati registrati
 AsyncWebServer server(80); // Server web
+AsyncWebSocket ws("/ws"); // WebSocket
+volatile int connectedClients = 0; // Numero di client connessi
 Preferences preferences; // Preferenze (Per savare la configurazione)
 
 // Start timer
@@ -140,22 +142,17 @@ void writeCsv(int X, int Y, float mag) {
 
 // Gestisco LED per direzione scansione
 void LEDUpDown(float Ycm, int Yprec) {
-    // Accendo il LED centrale
-    if (Ycm - int((Ycm / NCM) * NCM > float(NCM) / 3) && (Ycm - int(Ycm / NCM) * NCM < float(NCM) * 2 / 3)) {
+    if (Ycm - int((Ycm / NCM) * NCM > float(NCM) / 3) && (Ycm - int(Ycm / NCM) * NCM < float(NCM) * 2 / 3)) { // Accendo il LED centrale
         digitalWrite(centralLED, HIGH);
         digitalWrite(upperLED, LOW);
         digitalWrite(lowerLED, LOW);
     }
-
-    // Accendo il LED in basso
-    if (Ycm - int(Ycm / NCM) * NCM > float(NCM) * 2 / 3) {
+    if (Ycm - int(Ycm / NCM) * NCM > float(NCM) * 2 / 3) { // Accendo il LED in basso
         digitalWrite(centralLED, LOW);
         digitalWrite(upperLED, LOW);
         digitalWrite(lowerLED, HIGH);
     }
-
-    // Accendo il LED in alto
-    if (Ycm - int(Ycm / NCM) * NCM < float(NCM) / 3) {
+    if (Ycm - int(Ycm / NCM) * NCM < float(NCM) / 3) { // Accendo il LED in alto
         digitalWrite(centralLED, LOW);
         digitalWrite(upperLED, HIGH);
         digitalWrite(lowerLED, LOW);
@@ -188,6 +185,45 @@ bool writeConfig() {
     preferences.end();
     if (devMode) Serial.print("Configurazione salvata correttamente");
     return true; // Tutto OK
+}
+
+// Mando il messaggio via WebSocket
+void sendSocketMessage() {
+    if (connectedClients <= 0) return; // Se non ci sono client connessi, non faccio nulla
+    if (devMode) Serial.println("Invio messaggio via WebSocket");
+    JsonDocument doc;
+    doc["status"] = currentScanStatus; // Stato lettura
+    doc["data"] = csvString; // Stringa CSV completa
+    size_t jsonLength = measureJson(doc) + 1; // Grandezza del documento JSON
+    char json[jsonLength];
+    serializeJson(doc, json, sizeof(json));
+    ws.textAll(json); // Invio il messaggio
+}
+
+// Gestisco la risposta del Websocket
+void processSocketMessage(const char* message, size_t length) {
+    // Leggo il messaggio
+}
+
+// Evento per Websocket
+void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
+    switch (type) {
+        case WS_EVT_CONNECT: // Evento di connessione
+            connectedClients++; // Incrementa il numero di client connessi
+            if (devMode) Serial.println("WebSocket connected");
+            break;
+        case WS_EVT_DISCONNECT: // Evento di disconnessione
+            connectedClients--; // Decrementa il numero di client connessi
+            if (devMode) Serial.println("WebSocket disconnected");
+            break;
+        case WS_EVT_DATA:
+            AwsFrameInfo *info = (AwsFrameInfo*)arg;
+            if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+                data[len] = 0; // Aggiungo il carattere di fine stringa
+                processSocketMessage((const char*)data, len); // Gestisco la risposta del Websocket
+            }
+            break;
+    }
 }
 
 // Faccio partire il server web
@@ -223,7 +259,7 @@ bool setupServer() {
         request->send(200, "application/json", json); // Mando risposta
     });
 
-    // Polling per capire cosa sta facendo l'ESP
+    /* Polling per capire cosa sta facendo l'ESP
 	server.on("/readScan", HTTP_GET, [](AsyncWebServerRequest *request) {
         JsonDocument doc;
         doc["status"] = currentScanStatus; // Stato lettura
@@ -233,6 +269,11 @@ bool setupServer() {
 		serializeJson(doc, json, sizeof(json));
 		request->send(200, "application/json", json); // Mando risposta
     });
+    */
+
+    // Aggiungo evento per Websocket
+    ws.onEvent(onWsEvent);
+    server.addHandler(&ws);
 
     // Avvio access point e server
     if (!WiFi.softAP(accessPointSSID)) // Configuro l'ESP come access point
@@ -387,6 +428,7 @@ void loop() {
                     if (devMode) stampaNormale(int(Xcm / NCM), int(Ycm / NCM), delta); // Stampo valori su seriale
                     currentScanStatus = SCANNING; // Setto stato SCANNING
                     writeCsv(int(Xcm / NCM), int(Ycm / NCM), delta); // Aggiungo al CSV
+                    sendSocketMessage(); // Mando il messaggio via WebSocket
                     printed = true;
                     LedPWM();
                     stato = 5;

@@ -6,6 +6,8 @@ const ESP32IP = ""; // "http://localhost:3000"
 let valuesVisible = ""; // Visibilità dei valori di magnetismo ("", "MAG", "NORM")
 const scanStatus = { READY: 0, SCANNING: 1, ENDED: 2 }; // Stato della scansione
 let currentStatus = scanStatus.READY; // Stato attuale della scansione
+const socketUrl = `ws://${window.location.host}/ws`; // URL per connettersi al WebSocket
+const socket = new WebSocket(socketUrl); // Oggetto WebSocket
 
 // Documento pronto
 $(document).ready(() => {
@@ -15,7 +17,7 @@ $(document).ready(() => {
 // Funzione init
 const init = () => {
     getConfuguration(); // Prendo la configurazione iniziale
-    pollingRead(); // Inizio polling
+    // pollingRead(); // Inizio polling
 };
 
 // Prendo la configurazione iniziale
@@ -49,9 +51,39 @@ const handleSaveSettingsPress = () => {
     });
 };
 
+/*********************************** Gestione WebSocket ***********************************/
+
+socket.onopen = event => { // Apertura connessione
+    console.log("Connessione al WebSocket aperta");
+};
+socket.onclose = event => { // Chiusura connessione
+    console.log(`Connessione chiusa, codice errore: ${event.code}, motivo: ${event.reason}`);
+};
+socket.onerror = error => { // Errore
+    console.log(`Errore WebSocket: ${error.message}`);
+};
+socket.onmessage = event => { // Evento di ricezione di un messaggio
+    manageSocketMessage(event.data); // Gestisco il messaggio di risposta
+};
+
+// Gestisco il messaggio di risposta
+manageSocketMessage = data => {
+    switch (data.status) {
+        case scanStatus.READY: // L'ESP è in attesa di iniziare una scansione
+            manageStatusReady(data);
+            break;
+        case scanStatus.SCANNING: // L'ESP sta eseguendo una scansione
+            manageStatusScanning(data);
+            break;
+        case scanStatus.ENDED: // L'ESP ha terminato una scansione
+            manageStatusEnded(data);
+            break;
+    }
+};
+
 /*********************************** Creazione della heatmap ***********************************/
 
-// Start della lettura (polling)
+/* Start della lettura (polling)
 const pollingRead = () => {
     const polling = setInterval(() => {
         $.ajax({
@@ -75,6 +107,7 @@ const pollingRead = () => {
         });
     }, 5000); // Ogni secondo
 };
+*/
 
 // Gestione dello stato READY
 const manageStatusReady = response => {
