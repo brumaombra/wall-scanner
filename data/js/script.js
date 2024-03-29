@@ -73,7 +73,7 @@ const pollingRead = () => {
                 console.log(error);
             }
         });
-    }, 1000); // Ogni secondo
+    }, 5000); // Ogni secondo
 };
 
 // Gestione dello stato READY
@@ -114,7 +114,7 @@ const parseCSV = text => {
     try {
         rows = text.split(";").map(row => row.split(","));
         reference = parseFloat(rows[0]); // Valore di riferimento
-        rows.shift(); // Rimuovo header con valore di riferimento
+        rows = rows.filter(item => item.length === 3); // Prendo solo righe valide (Con i 3 valori)
     } catch (e) {
         console.log("Errore durante la pulizia e suddivisione del CSV:", e);
         return;

@@ -122,6 +122,13 @@ void stampaNormale(int X, int Y, float mag) {
     Serial.println(mag, 1);
 }
 
+// Aggiungo il valore di riferimento al CSV
+void addReferenceValueToCsv() {
+    char tempBuffer[30];
+    sprintf(tempBuffer, "%.1f;", Fi0);
+    strcat(csvString, tempBuffer);
+}
+
 // Creo la string CSV
 void writeCsv(int X, int Y, float mag) {
     char tempBuffer[30];
@@ -165,7 +172,10 @@ bool setupLittleFS() {
 
 // Faccio partire il server web
 bool setupServer() {
-    server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html"); // Serve web page
+    server.serveStatic("/home", LittleFS, "/").setDefaultFile("index.html"); // Serve web page
+    server.serveStatic("/js", LittleFS, "/js"); // Serve web page
+    server.serveStatic("/css", LittleFS, "/css"); // Serve web page
+    server.serveStatic("/webfonts", LittleFS, "/webfonts"); // Serve web page
 	server.onNotFound([](AsyncWebServerRequest *request) { // Error handling
 		request->send(404); // Page not found
 	});
@@ -265,7 +275,7 @@ bool setupMouse() {
 
 // Setup
 void setup() {
-    Serial.begin(115200); // Inizializzo la seriale
+    if (devMode) Serial.begin(115200); // Inizializzo la seriale
     setupLittleFS(); // Setup LittleFS
     setupServer(); // Setup server web
     setupPin(); // Setup dei pin
@@ -329,6 +339,7 @@ void loop() {
                     if (devMode) Serial.println(Fi0, 1);
                     delay(1);
                     if (devMode) Serial.println("----------");
+                    addReferenceValueToCsv(); // Aggiungo il valore di riferimento al CSV
                     LedPWM();
                     delay(1000);
                     printed = true;
