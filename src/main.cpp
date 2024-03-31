@@ -69,10 +69,12 @@ AsyncWebSocket ws("/ws"); // WebSocket
 volatile int connectedClients = 0; // Numero di client connessi
 Preferences preferences; // Preferenze (Per savare la configurazione)
 
+bool setupMouse();
+
 // void attachAllInterrupts();
 // void detachAllInterrupts();
 
-// Start timer
+/* Start timer
 void IRAM_ATTR startTimer() {
     // detachAllInterrupts();
     if (!timerRunning) { // Se il timer non è attivo, azzero il contatore
@@ -83,8 +85,9 @@ void IRAM_ATTR startTimer() {
     }
     // attachAllInterrupts();
 }
+*/
 
-// Stop timer 
+/* Stop timer 
 void IRAM_ATTR stopTimer() {
     if (timerRunning) {
         elapsedTime = ESP.getCycleCount() - timerCounter;
@@ -95,18 +98,21 @@ void IRAM_ATTR stopTimer() {
         // Serial.println(xPortGetCoreID());
     }
 }
+*/
 
-// Attivo gli interrupt
+/* Attivo gli interrupt
 void attachAllInterrupts() {
     attachInterrupt(TXPIN, startTimer, RISING);
     attachInterrupt(RXPIN, stopTimer, FALLING);
 }
+*/
 
-// Disabilito gli interrupt
+/* Disabilito gli interrupt
 void detachAllInterrupts() {
     detachInterrupt(TXPIN);
     detachInterrupt(RXPIN);
 }
+*/
 
 // PWM per i LED
 void LedPWM() {
@@ -243,6 +249,14 @@ bool setupServer() {
 		request->send(404); // Page not found
 	});
 
+	server.on("/home", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(LittleFS, "/index.html", "text/html");
+        // setupMouse();
+    });
+    server.on("/js/script.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(LittleFS, "/js/script.js", "application/javascript");
+    });
+
     // Prendo le impostazioni
 	server.on("/getSettings", HTTP_GET, [](AsyncWebServerRequest *request) {
         JsonDocument doc;
@@ -251,6 +265,7 @@ bool setupServer() {
 		char json[jsonLength];
 		serializeJson(doc, json, sizeof(json));
 		request->send(200, "application/json", json); // Mando risposta
+        // setupMouse();
     });
 
     // Salvo le impostazioni
@@ -264,6 +279,7 @@ bool setupServer() {
 		char json[jsonLength];
 		serializeJson(doc, json, sizeof(json));
         request->send(200, "application/json", json); // Mando risposta
+        // setupMouse();
     });
 
     // Aggiungo evento per Websocket
@@ -322,8 +338,11 @@ void setup() {
     if (devMode) Serial.println("Setup OK");
 }
 
+bool TXval, RXval, LastTX, LastRX;
+
 // Loop
 void loop() {
+    /*
     switch (stato) {
         case 0: // Stato iniziale
             currentScanStatus = READY; // Setto stato READY
@@ -442,6 +461,229 @@ void loop() {
 
         case 5:
             stato = 3;
+            break;
+    }
+    */
+
+   switch (stato) {
+        case 0: // Stato iniziale
+            if (!digitalRead(BUTTON)) {
+                first = true;
+                if (devMode) Serial.println("Pulsante premuto!");
+                stato = 1;
+            }
+            break;
+
+        case 1: // Taro la bobina
+            if (first) {
+                first = false;
+                TXval = digitalRead(TXPIN);
+                RXval = digitalRead(RXPIN);
+                LastTX = TXval;
+                LastRX = RXval;
+                i = 0;
+                delta = 0;
+                // timerRunning = false;
+                timerCounter = 0; // Reset
+                delay(500);
+            }
+
+            TXval = digitalRead(TXPIN);
+            RXval = digitalRead(RXPIN);
+
+            if (!LastTX && TXval) { // Fronte di salita del TX
+                timerCounter = ESP.getCycleCount();
+                // timerRunning = true;
+            }
+
+            if (!RXval && LastRX && timerCounter != 0) { // Fronte di discesa del RX
+                elapsedTime = ESP.getCycleCount() - timerCounter;
+                // timerRunning = false;
+                timerCounter = 0; // Reset
+                i++;
+                delta = delta + elapsedTime / 240;
+                //delay(100);
+                if (i > 600){
+                    delta = delta / 601;
+                    LedPWM();
+                    Serial.println(delta, 1);
+                    i = 0;
+                    delta = 0;
+                }
+            }
+
+            LastTX = TXval;
+            LastRX = RXval;
+            
+            if (!digitalRead(BUTTON)) {
+                first = true;
+                stato = 2;
+                if (devMode) Serial.println("----------");
+            }
+            break;
+
+        case 2: // Taro il delay
+            if (first) {
+                first = false;
+                TXval = digitalRead(TXPIN);
+                RXval = digitalRead(RXPIN);
+                LastTX = TXval;
+                LastRX = RXval;
+                i = 0;
+                delta = 0;
+                // timerRunning = false;
+                timerCounter = 0; // Reset
+                delay(500);
+            }
+
+            TXval = digitalRead(TXPIN);
+            RXval = digitalRead(RXPIN);
+
+            if (!LastTX && TXval) { // Fronte di salita del TX
+                timerCounter = ESP.getCycleCount();
+                // timerRunning = true;
+            }
+
+            if (!RXval && LastRX && timerCounter != 0) { // Fronte di discesa del RX
+                elapsedTime = ESP.getCycleCount() - timerCounter;
+                // timerRunning = false;
+                timerCounter = 0; // Reset
+                i++;
+                Fi0 = Fi0 + elapsedTime / 240;
+                //delay(100);
+                if (i > 5000) {
+                    Fi0 = Fi0 / 5001;
+                    LedPWM();
+                    Serial.println(Fi0, 1);
+                    i = 0;
+                    stato = 3;
+                }
+            }
+
+            LastTX = TXval;
+            LastRX = RXval;
+
+            /*
+            if (!printed) {
+                if (i < 5000) {
+                    Fi0 = Fi0 + float(elapsedTime) / 240; // In micros
+                    elapsedTime = 0;
+                    i++;
+                    delayMicroseconds(200);
+                } else {
+                    i = 0;
+                    Fi0 = Fi0 / 5035;
+                    if (devMode) Serial.println(Fi0, 1);
+                    delay(1);
+                    if (devMode) Serial.println("----------");
+                    addReferenceValueToCsv(); // Aggiungo il valore di riferimento al CSV
+                    LedPWM();
+                    delay(1000);
+                    printed = true;
+                    first = true;
+                    stato = 3;
+                }
+            }
+            attachAllInterrupts();
+            */
+            break;
+
+        case 3: // Controllo se mi sono mosso
+            if (millis() - prevMillis > 200) {
+                Serial.println("case 3");
+                prevMillis = millis();
+                LedPWM();
+                // setupMouse();
+                mouse.get_data();
+                XVal += mouse.x_movement();
+                YVal += mouse.y_movement();
+                Serial.println(XVal);
+                Serial.println(YVal);
+                Xcm = XVal * 0.01151;
+                Ycm = YVal * 0.01151;
+                LEDUpDown(Ycm, Yprec);
+                if (Xprec != int(Xcm) / NCM | Yprec != int(Ycm) / NCM) {
+                    Xprec = int(Xcm) / NCM;
+                    Yprec = int(Ycm) / NCM;
+                    OKXY = true;
+                }
+                if ((Xcm - int(Xcm / NCM) * NCM > float(NCM) / 3) && (Xcm - int(Xcm / NCM) * NCM < float(NCM) * 2 / 3) && OKXY) {
+                    OKXY = false;
+                    // stato = 4;
+                    // attachAllInterrupts();
+                }
+            }
+            break;
+
+        case 4: // Misuro magnetismo e torno a misurare
+            if (first) {
+                first = false;
+                TXval = digitalRead(TXPIN);
+                RXval = digitalRead(RXPIN);
+                LastTX = TXval;
+                LastRX = RXval;
+                i = 0;
+                delta = 0;
+                // timerRunning = false;
+                timerCounter = 0; // Reset
+                delay(500);
+            }
+
+            TXval = digitalRead(TXPIN);
+            RXval = digitalRead(RXPIN);
+
+            if (!LastTX && TXval) { // Fronte di salita del TX
+                timerCounter = ESP.getCycleCount();
+                // timerRunning = true;
+            }
+
+            if (!RXval && LastRX && timerCounter != 0) { // Fronte di discesa del RX
+                elapsedTime = ESP.getCycleCount() - timerCounter;
+                // timerRunning = false;
+                timerCounter = 0; // Reset
+                i++;
+                delta = delta + elapsedTime / 240;
+                //delay(100);
+                if (i > 500){
+                    delta = delta / 501;
+                    LedPWM();
+                    Serial.println(delta, 1);
+                    i = 0;
+                    delta = 0;
+                    if (devMode) stampaNormale(int(Xcm / NCM), int(Ycm / NCM), delta); // Stampo valori su seriale
+                    currentScanStatus = SCANNING; // Setto stato SCANNING
+                    writeCsv(int(Xcm / NCM), int(Ycm / NCM), delta); // Aggiungo al CSV
+                    // sendSocketMessage(); // Mando il messaggio via WebSocket
+                    LedPWM();
+                    stato = 3;
+                    first = true;
+                }
+            }
+
+            LastTX = TXval;
+            LastRX = RXval;
+
+            /*
+            if (!printed) {
+                if (i < 500) {
+                    delta = delta + elapsedTime / 240; // In micros
+                    elapsedTime = 0;
+                    i++;
+                    delayMicroseconds(200);
+                } else {
+                    i = 0;
+                    delta = delta / 501;
+                    if (devMode) stampaNormale(int(Xcm / NCM), int(Ycm / NCM), delta); // Stampo valori su seriale
+                    currentScanStatus = SCANNING; // Setto stato SCANNING
+                    writeCsv(int(Xcm / NCM), int(Ycm / NCM), delta); // Aggiungo al CSV
+                    sendSocketMessage(); // Mando il messaggio via WebSocket
+                    printed = true;
+                    LedPWM();
+                    stato = 5;
+                    first = true;
+                }
+            }
+            */
             break;
     }
 }
