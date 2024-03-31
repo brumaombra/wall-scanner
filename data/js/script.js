@@ -6,8 +6,6 @@ const ESP32IP = ""; // "http://localhost:3000"
 let valuesVisible = ""; // Visibilità dei valori di magnetismo ("", "MAG", "NORM")
 const scanStatus = { READY: 0, SCANNING: 1, ENDED: 2 }; // Stato della scansione
 let currentStatus = scanStatus.READY; // Stato attuale della scansione
-const socketUrl = `ws://${window.location.host}/ws`; // URL per connettersi al WebSocket
-const socket = new WebSocket(socketUrl); // Oggetto WebSocket
 
 // Documento pronto
 $(document).ready(() => {
@@ -16,8 +14,31 @@ $(document).ready(() => {
 
 // Funzione init
 const init = () => {
-    getConfuguration(); // Prendo la configurazione iniziale
-    // pollingRead(); // Inizio polling
+    setTimeout(() => {
+        initSocket(); // Inizializzo il WebSocket
+        setTimeout(() => {
+            getConfuguration(); // Prendo la configurazione iniziale
+        }, 1000);
+    }, 1000);
+};
+
+// Inizializzo il WebSocket
+const initSocket = () => {
+    const socketUrl = `ws://${window.location.host}/ws`; // URL per connettersi al WebSocket
+    let socket = new WebSocket(socketUrl); // Oggetto WebSocket
+    socket.onopen = event => { // Apertura connessione
+        console.log("Connessione al WebSocket aperta");
+    };
+    socket.onclose = event => { // Chiusura connessione
+        console.log(`Connessione chiusa, codice errore: ${event.code}, motivo: ${event.reason}`);
+    };
+    socket.onerror = error => { // Errore
+        console.log(`Errore WebSocket: ${error.message}`);
+    };
+    socket.onmessage = event => { // Evento di ricezione di un messaggio
+        const json = JSON.parse(event.data); // Faccio il parse della stringa JSON
+        manageSocketMessage(json); // Gestisco il messaggio di risposta
+    };
 };
 
 // Prendo la configurazione iniziale
@@ -52,19 +73,6 @@ const handleSaveSettingsPress = () => {
 };
 
 /*********************************** Gestione WebSocket ***********************************/
-
-socket.onopen = event => { // Apertura connessione
-    console.log("Connessione al WebSocket aperta");
-};
-socket.onclose = event => { // Chiusura connessione
-    console.log(`Connessione chiusa, codice errore: ${event.code}, motivo: ${event.reason}`);
-};
-socket.onerror = error => { // Errore
-    console.log(`Errore WebSocket: ${error.message}`);
-};
-socket.onmessage = event => { // Evento di ricezione di un messaggio
-    manageSocketMessage(event.data); // Gestisco il messaggio di risposta
-};
 
 // Gestisco il messaggio di risposta
 manageSocketMessage = data => {
