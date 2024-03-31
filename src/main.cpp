@@ -69,12 +69,17 @@ AsyncWebSocket ws("/ws"); // WebSocket
 volatile int connectedClients = 0; // Numero di client connessi
 Preferences preferences; // Preferenze (Per savare la configurazione)
 
+// void attachAllInterrupts();
+// void detachAllInterrupts();
+
 // Start timer
 void IRAM_ATTR startTimer() {
     // detachAllInterrupts();
     if (!timerRunning) { // Se il timer non è attivo, azzero il contatore
         timerCounter = ESP.getCycleCount();
         timerRunning = true;
+        // Serial.print("Interrupt running on core ");
+        // Serial.println(xPortGetCoreID());
     }
     // attachAllInterrupts();
 }
@@ -86,6 +91,8 @@ void IRAM_ATTR stopTimer() {
         // detachAllInterrupts();
         timerRunning = false;
         printed = false;
+        // Serial.print("Interrupt running on core ");
+        // Serial.println(xPortGetCoreID());
     }
 }
 
@@ -174,7 +181,7 @@ bool readConfig() {
     preferences.begin("config", false);
     NCM = preferences.getInt("resolution", NCM); // Risoluzione scansione
     preferences.end();
-    if (devMode) Serial.print("Configurazione caricata correttamente");
+    if (devMode) Serial.println("Configurazione caricata correttamente");
     return true; // Tutto OK
 }
 
@@ -183,7 +190,7 @@ bool writeConfig() {
     preferences.begin("config", false);
     preferences.putInt("resolution", NCM); // Risoluzione scansione
     preferences.end();
-    if (devMode) Serial.print("Configurazione salvata correttamente");
+    if (devMode) Serial.println("Configurazione salvata correttamente");
     return true; // Tutto OK
 }
 
@@ -232,7 +239,7 @@ bool setupServer() {
     server.serveStatic("/js", LittleFS, "/js"); // Serve web page
     server.serveStatic("/css", LittleFS, "/css"); // Serve web page
     server.serveStatic("/webfonts", LittleFS, "/webfonts"); // Serve web page
-	server.onNotFound([](AsyncWebServerRequest *request) { // Error handling
+    server.onNotFound([](AsyncWebServerRequest *request) { // Error handling
 		request->send(404); // Page not found
 	});
 
@@ -258,18 +265,6 @@ bool setupServer() {
 		serializeJson(doc, json, sizeof(json));
         request->send(200, "application/json", json); // Mando risposta
     });
-
-    /* Polling per capire cosa sta facendo l'ESP
-	server.on("/readScan", HTTP_GET, [](AsyncWebServerRequest *request) {
-        JsonDocument doc;
-        doc["status"] = currentScanStatus; // Stato lettura
-        doc["data"] = csvString; // Stringa CSV completa
-        size_t jsonLength = measureJson(doc) + 1; // Grandezza del documento JSON
-		char json[jsonLength];
-		serializeJson(doc, json, sizeof(json));
-		request->send(200, "application/json", json); // Mando risposta
-    });
-    */
 
     // Aggiungo evento per Websocket
     ws.onEvent(onWsEvent);
@@ -308,6 +303,13 @@ bool setupMouse() {
     }
 }
 
+/* Definizione del task per il server web
+void WebServerTask(void *pvParameters) {
+    setupServer(); // Setup server web
+    for(;;) vTaskDelay(1); // Loop infinito per evitare che il task termini
+}
+*/
+
 // Setup
 void setup() {
     if (devMode) Serial.begin(115200); // Inizializzo la seriale
@@ -316,6 +318,7 @@ void setup() {
     setupServer(); // Setup server web
     setupPin(); // Setup dei pin
     setupMouse(); // Setup del mouse
+    // xTaskCreatePinnedToCore(WebServerTask, "WebServerTask", 10000, NULL, 1, NULL, 0);
     if (devMode) Serial.println("Setup OK");
 }
 
