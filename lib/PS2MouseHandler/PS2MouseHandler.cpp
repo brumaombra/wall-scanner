@@ -2,7 +2,7 @@
 #include "HardwareSerial.h"
 #include "PS2MouseHandler.h"
 
-#define MAX_CLOCK_TIMEOUT 500 // Max clock timeout, if negative no timeout
+#define MAX_CLOCK_TIMEOUT 100 // Max clock timeout, if negative no timeout
 
 PS2MouseHandler::PS2MouseHandler(int clock_pin, int data_pin, int mode) {
     _clock_pin = clock_pin;
