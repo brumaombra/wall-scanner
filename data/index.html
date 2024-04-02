@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wall Scanner</title>
+    <link rel="icon" href="webfonts/wall-scanner-favicon.svg">
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
     <link href="css/all.min.css" rel="stylesheet">
@@ -16,24 +17,15 @@
         <div class="container">
             <a class="navbar-brand" href="#"><i class="fa-solid fa-barcode me-2"></i>Wall Scanner</a>
             <div class="me-auto"></div>
-            <!-- <button id="newReadButton" type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#newReadModal"><i class="fa-solid fa-expand me-2"></i>Nuova scansione</button> -->
+
+            <!-- Icone connessione -->
+            <div class="link-icon-container">
+                <i id="linkIconKo" class="fa-solid fa-link-slash link-ko" title="Wall scanner non connesso"></i>
+                <i id="linkIconOk" class="fa-solid fa-link link-ok hidden" title="Wall scanner connesso"></i>
+            </div>
             <button id="settingsButton" type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#settingsModal" title="Impostazioni"><i class="fa-solid fa-gear"></i></button>
         </div>
     </nav>
-
-    <!-- Navbar responsive
-    <nav class="navbar navbar-expand-lg bg-body-tertiary mb-5">
-        <div class="container">
-            <a class="navbar-brand" href="#"><i class="fa-solid fa-barcode me-2"></i>Wall Scanner</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <div class="me-auto"></div>
-                <button id="settingsButton" type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#settingsModal" title="Impostazioni"><i class="fa-solid fa-gear"></i></button>
-            </div>
-        </div>
-    </nav> -->
 
     <!-- Container principale -->
     <div class="container">
@@ -107,30 +99,13 @@
         </div>
     </div>
 
-    <!-- Modal nuova scansione
-    <div id="newReadModal" class="modal fade" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title fs-5"><i class="fa-solid fa-expand me-2"></i>Nuova scansione</h1>
-                </div>
-                <div class="modal-body">
-                    <p class="mb-0">Avviare la scansione?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">CHIUDI</button>
-                    <button type="button" class="btn btn-primary" onclick="handleNewReadPress()">AVVIA</button>
-                </div>
-            </div>
-        </div>
-    </div> -->
-
-    <!-- Toast salvataggio impostazioni -->
-    <div id="settingsSuccessToast" class="toast align-items-center bottom-0 end-0 mb-4 me-4 position-absolute" role="alert" aria-live="assertive" aria-atomic="true">
+    <!-- Message toast -->
+    <div id="messageToast" class="toast align-items-center bottom-0 end-0 mb-4 me-4 position-absolute" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body d-flex">
-                <i class="fa-solid fa-circle-check success-icon fs-25 me-2"></i>
-                <p>Impostazioni salvate!</p>
+                <i id="messageToastSuccessIcon" class="fa-solid fa-circle-check success-icon fs-25 me-2"></i>
+                <i id="messageToastErrorIcon" class="fa-solid fa-circle-exclamation error-icon fs-25 me-2"></i>
+                <p id="messageToastText"></p>
             </div>
             <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>

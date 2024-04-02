@@ -46,6 +46,20 @@ body {
     font-weight: 700;
 }
 
+/* Contenitore icone connessione */
+.link-icon-container {
+    margin-right: 24px;
+}
+.link-icon-container i {
+    font-size: 21px;
+}
+i.link-ok {
+    color: var(--bs-success);
+}
+i.link-ko {
+    color: var(--bs-danger);
+}
+
 /* Container della matrice */
 .container-scansione {
     width: fit-content;
@@ -143,7 +157,6 @@ body {
 
 /* Busy full-screen */
 .fullscreen-loader {
-    display: none;
     position: fixed;
     top: 0;
     left: 0;

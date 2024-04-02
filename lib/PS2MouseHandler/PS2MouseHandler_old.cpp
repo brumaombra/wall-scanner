@@ -289,17 +289,12 @@ uint8_t PS2MouseHandler::read_byte() {
   // read start bit but check for timeout
   while (digitalRead(_clock_pin)) {
     if (millis() - start_time > 100) {
-      return 0; // timeout
+      // timeout
+      return 0;
     }
   }
-
-  start_time = millis(); // Reset start time for the next phase
-  while (!digitalRead(_clock_pin)) {
-    if (millis() - start_time > 100) { // Timeout for clock going low
-      return 0; // Timeout occurred
-    }
-  }
-
+  // delayMicroseconds(5);
+  while (!digitalRead(_clock_pin)) {;}
   // read data bits
   for (int i = 0; i < 8; i++) {
     bitWrite(data, i, read_bit());
@@ -310,19 +305,9 @@ uint8_t PS2MouseHandler::read_byte() {
 }
 
 int PS2MouseHandler::read_bit() {
-  unsigned long start_time = millis(); // Reset start time for the next phase
-  while (digitalRead(_clock_pin)) {
-    if (millis() - start_time > 100) { // Timeout for clock going low
-      return 0; // Timeout occurred
-    }
-  }
+  while (digitalRead(_clock_pin)) {;}
   int bit = digitalRead(_data_pin);
-  start_time = millis(); // Reset start time for the next phase
-  while (!digitalRead(_clock_pin)) {
-    if (millis() - start_time > 100) { // Timeout for clock going low
-      return bit; // Timeout occurred
-    }
-  }
+  while (!digitalRead(_clock_pin)) {;}
   return bit;
 }
 

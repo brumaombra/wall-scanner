@@ -9,12 +9,12 @@ let currentStatus = scanStatus.READY; // Stato attuale della scansione
 
 // Documento pronto
 $(document).ready(() => {
+    $("#linkIconOk").animate({ opacity: 0 }, 0); // Nascondo icona link OK
     init(); // Funzione init
 });
 
 // Funzione init
 const init = () => {
-    setBusy(true); // Busy on
     setTimeout(() => {
         initSocket(); // Inizializzo il WebSocket
         setTimeout(() => {
@@ -33,9 +33,11 @@ const initSocket = () => {
     let socket = new WebSocket(socketUrl); // Oggetto WebSocket
     socket.onopen = event => { // Apertura connessione
         console.log("Connessione al WebSocket aperta");
+        showHideLinkIcon(true); // Mostro l'icona di collegamento
     };
     socket.onclose = event => { // Chiusura connessione
         console.log(`Connessione chiusa, codice errore: ${event.code}, motivo: ${event.reason}`);
+        showHideLinkIcon(false); // Nascondo l'icona di collegamento
     };
     socket.onerror = error => { // Errore
         console.log(`Errore WebSocket: ${error.message}`);
@@ -54,6 +56,7 @@ const getConfuguration = (successCallback, errorCallback) => {
         $("#settingsResolution").val(data.resolution || "3"); // Imposto risoluzione scansione
         successCallback(); // Success callback
     }).catch(error => {
+        showToast("ERROR", "Errore: impostazioni non caricate"); // Mostro toast
         console.log(error);
         errorCallback(); // Error callback
     });
@@ -70,11 +73,10 @@ const handleSaveSettingsPress = () => {
     }).then(data => {
         setBusy(false); // Busy off
         valuesVisible = $("#settingsValues").val(); // Salvo impostazione visibilità valori
-        $("#settingsSuccessToast").toast({
-            delay: 2000
-        }).toast("show");
+        showToast("SUCCESS", "Impostazioni salvate!"); // Mostro toast
     }).catch(error => {
         setBusy(false); // Busy off
+        showToast("ERROR", "Errore durante il salvataggio"); // Mostro toast
         console.log(error);
     });
 };
@@ -97,32 +99,6 @@ manageSocketMessage = data => {
 };
 
 /*********************************** Creazione della heatmap ***********************************/
-
-/* Start della lettura (polling)
-const pollingRead = () => {
-    const polling = setInterval(() => {
-        $.ajax({
-            url: `${ESP32IP}/readScan`,
-            type: "GET",
-            success: response => {
-                switch (response.status) {
-                    case scanStatus.READY: // L'ESP è in attesa di iniziare una scansione
-                        manageStatusReady(response);
-                        break;
-                    case scanStatus.SCANNING: // L'ESP sta eseguendo una scansione
-                        manageStatusScanning(response);
-                        break;
-                    case scanStatus.ENDED: // L'ESP ha terminato una scansione
-                        manageStatusEnded(response);
-                        break;
-                }
-            }, error: error => {
-                console.log(error);
-            }
-        });
-    }, 5000); // Ogni secondo
-};
-*/
 
 // Gestione dello stato READY
 const manageStatusReady = response => {
@@ -334,8 +310,40 @@ const getContrastColor = bgColor => {
 
 // Busy
 const setBusy = busy => {
-    if (busy)
-        $("#fullScreenBusy").fadeIn(100);
-    else
-        $("#fullScreenBusy").fadeOut(100);
+    if (busy) { // Visualizzo busy
+        $("#fullScreenBusy").removeClass("hidden");
+        $("#fullScreenBusy").animate({ opacity: 1 }, 200, "swing");
+    } else { // Nascondo busy
+        $("#fullScreenBusy").animate({ opacity: 0 }, 200, "swing", () => {
+            $("#fullScreenBusy").addClass("hidden");
+        });
+    }
+};
+
+// Visualizzo o nascondo icona connessione
+const showHideLinkIcon = connected => {
+    if (connected) { // Mostro icona connessione OK
+        $("#linkIconKo").animate({ opacity: 0 }, 200, "swing", () => {
+            $("#linkIconOk").removeClass("hidden");
+            $("#linkIconOk").animate({ opacity: 1 }, 200, "swing");
+        });
+    } else { // Mostro icona connessione KO
+        $("#linkIconOk").animate({ opacity: 0 }, 200, "swing", () => {
+            $("#linkIconOk").addClass("hidden");
+            $("#linkIconKo").animate({ opacity: 1 }, 200, "swing");
+        });
+    }
+};
+
+// Visualizzo il messaggio toast
+const showToast = (type, message) => {
+    if (type === "SUCCESS") { // Mostro icona di success
+        $("#messageToastSuccessIcon").removeClass("hidden");
+        $("#messageToastErrorIcon").addClass("hidden");
+    } else { // Mostro icona di errore
+        $("#messageToastSuccessIcon").addClass("hidden");
+        $("#messageToastErrorIcon").removeClass("hidden");
+    }
+    $("#messageToastText").text(message); // Imposto il testo
+    $("#messageToast").toast({ delay: 2000 }).toast("show"); // Visualizzo il toast
 };
