@@ -14,12 +14,17 @@ $(document).ready(() => {
 
 // Funzione init
 const init = () => {
+    setBusy(true); // Busy on
     setTimeout(() => {
         initSocket(); // Inizializzo il WebSocket
         setTimeout(() => {
-            getConfuguration(); // Prendo la configurazione iniziale
-        }, 1000);
-    }, 1000);
+            getConfuguration(() => { // Prendo la configurazione iniziale
+                setBusy(false); // Busy off
+            }, () => {
+                setBusy(false); // Busy off
+            });
+        }, 500);
+    }, 500);
 };
 
 // Inizializzo il WebSocket
@@ -42,13 +47,15 @@ const initSocket = () => {
 };
 
 // Prendo la configurazione iniziale
-const getConfuguration = () => {
+const getConfuguration = (successCallback, errorCallback) => {
     fetch(`${ESP32IP}/getSettings`).then(response => {
         return response.json(); // Prendo il JSON
     }).then(data => {
         $("#settingsResolution").val(data.resolution || "3"); // Imposto risoluzione scansione
+        successCallback(); // Success callback
     }).catch(error => {
         console.log(error);
+        errorCallback(); // Error callback
     });
 };
 

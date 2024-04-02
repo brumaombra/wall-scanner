@@ -273,6 +273,16 @@ void resetVariabiliLoop() {
     LastTX = digitalRead(TXPIN); // Leggo valore TX
     LastRX = digitalRead(RXPIN); // Leggo valore RX
     i = Fi0 = delta = timerCounter = 0; // Reset variabili
+    prevMillis = millis(); // Reset millis
+}
+
+// Passo allo stato 5
+void navToStato5() {
+    resetVariabiliLoop(); // Preparo variabili per il prossimo stato
+    currentScanStatus = ENDED; // Scansione terminata
+    sendSocketMessage(); // Mando il messaggio via WebSocket
+    if (devMode) Serial.println("Scansione terminata");
+    stato = 5; // Passo allo stato finale
 }
 
 // Stato iniziale
@@ -360,6 +370,10 @@ void stato3() {
         resetVariabiliLoop(); // Preparo variabili per il prossimo stato
         stato = 4; // Passo al prossimo stato
     }
+
+    // Controllo pressione del pulsante
+    if (!digitalRead(BUTTON))
+        navToStato5(); // Passo allo stato 5
 }
 
 // Misuro magnetismo e torno a misurare
@@ -387,6 +401,24 @@ void stato4() {
 
     LastTX = TXval; // Aggiorno valore TX
     LastRX = RXval; // Aggiorno valore RX
+
+    // Controllo pressione del pulsante
+    if (!digitalRead(BUTTON))
+        navToStato5(); // Passo allo stato 5
+}
+
+// Termino scansione e mando dati completi a front-end
+void stato5() {
+    if (millis() - prevMillis < 1000) { // Ogni secondo
+        prevMillis = millis(); // Aggiorno prevMillis
+        sendSocketMessage(); // Mando il messaggio via WebSocket
+    }
+
+    if (digitalRead(BUTTON)) return; // Se il pulsante non è premuto esco
+    csvString[0] = '\0'; // Svuoto CSV
+    currentScanStatus = READY; // Pronto per nuova scansione
+    if (devMode) Serial.println("Pronto per nuova scansione, premi il pulsante per iniziare la calibrazione");
+    stato = 0; // Ricomincio il ciclo
 }
 
 // Loop
@@ -406,6 +438,9 @@ void loop() {
             break;
         case 4: // Misuro magnetismo e torno a misurare
             stato4(); // Gestione stato 4
+            break;
+        case 5: // Termino scansione e mando dati completi a front-end
+            stato5(); // Gestione stato 5
             break;
     }
 }
