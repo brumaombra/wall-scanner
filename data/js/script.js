@@ -29,8 +29,8 @@ const init = () => {
 
 // Inizializzo il WebSocket
 const initSocket = () => {
-    // const socketUrl = `ws://${window.location.host}/ws`; // URL per connettersi al WebSocket
-    const socketUrl = `ws://localhost:8080`; // URL per connettersi al WebSocket
+    const socketUrl = `ws://${window.location.host}/ws`; // URL per connettersi al WebSocket
+    // const socketUrl = `ws://localhost:8080`; // URL per connettersi al WebSocket
     let socket = new WebSocket(socketUrl); // Oggetto WebSocket
     socket.onopen = event => { // Apertura connessione
         console.log("Connessione al WebSocket aperta");

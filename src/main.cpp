@@ -273,14 +273,15 @@ void setup() {
     if (devMode) Serial.println("Pronto per nuova scansione, premi il pulsante per iniziare la calibrazione");
 }
 
-// Lampeggio di successo LED verde (Delay totale 1800ms)
+// Lampeggio di successo LED verde (Delay totale 1200ms)
 void successBlinkingLed() {
     for (int counter = 0; counter < 3; counter++) {
-        digitalWrite(GREENLED, HIGH);
-        delay(300);
-        digitalWrite(GREENLED, LOW);
-        delay(300);
+        digitalWrite(centralLED, LOW);
+        delay(200);
+        digitalWrite(centralLED, HIGH);
+        delay(200);
     }
+    digitalWrite(centralLED, LOW); // Spengo
 }
 
 // Resetto le variabili usate nel loop
@@ -364,6 +365,7 @@ void stato2() {
             addReferenceValueToCsv(); // Aggiungo il valore di riferimento al CSV
             sendSocketMessage(); // Mando il messaggio via WebSocket
             successBlinkingLed(); // Lampeggio LED verde + delay per visualizzare il valore di riferimento sul front-end
+            delay(700); // Delay aggiuntivo per arrivare a 2500ms
             i = 0; // Reset contatore
             currentScanStatus = SCANNING; // Setto stato SCANNING
             sendSocketMessage(); // Mando il messaggio via WebSocket
