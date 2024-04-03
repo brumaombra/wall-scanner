@@ -46,12 +46,10 @@ PS2MouseHandler mouse(MOUSE_CLOCK, MOUSE_DATA, PS2_MOUSE_REMOTE); // Istanza mou
 unsigned int stato = 0; // Stato switch
 enum scanStatus { READY = 0, TUNING = 1, SCANNING = 2, ENDED = 3 }; // Stati della scansione
 scanStatus currentScanStatus = READY; // Stato della scansione
-volatile unsigned long timerCounter = 0;
-volatile float delta = 0;
-volatile float Fi0 = 29;
-volatile int elapsedTime = 0;
-volatile bool timerRunning = false;
-volatile bool printed = true;
+unsigned long timerCounter = 0;
+float delta = 0;
+float Fi0 = 29;
+int elapsedTime = 0;
 unsigned int i = 0; // Per fare la media
 const float soglia = 0.5; // Soglia per sensibilità LED
 unsigned long prevMillis = millis();
@@ -59,7 +57,6 @@ int XVal = 0, YVal = 0;
 int Xprec = 0, Yprec = 0;
 float Xcm = 0, Ycm = 0;
 byte NCM = 3; // Numero di cm ogni quanto fare una misura
-bool first = true; // Per capire se è la prima iterazione
 bool OKXY = true; // Per capire se ho già misurato in un certo 
 bool devMode = true; // Per capire se stampare i valori
 bool TXval, RXval, LastTX, LastRX; // Valori PIN
@@ -67,7 +64,7 @@ const char accessPointSSID[] = "Wall-scanner"; // SSID access point
 char csvString[10000] = ""; // Stringa per salvare i dati registrati
 AsyncWebServer server(80); // Server web
 AsyncWebSocket ws("/ws"); // WebSocket
-volatile int connectedClients = 0; // Numero di client connessi
+int connectedClients = 0; // Numero di client connessi
 Preferences preferences; // Preferenze (Per savare la configurazione)
 
 // PWM per i LED
@@ -276,6 +273,16 @@ void setup() {
     if (devMode) Serial.println("Pronto per nuova scansione, premi il pulsante per iniziare la calibrazione");
 }
 
+// Lampeggio di successo LED verde (Delay totale 1800ms)
+void successBlinkingLed() {
+    for (int counter = 0; counter < 3; counter++) {
+        digitalWrite(GREENLED, HIGH);
+        delay(300);
+        digitalWrite(GREENLED, LOW);
+        delay(300);
+    }
+}
+
 // Resetto le variabili usate nel loop
 void resetVariabiliLoop() {
     LastTX = digitalRead(TXPIN); // Leggo valore TX
@@ -289,8 +296,8 @@ void navToStato5() {
     resetVariabiliLoop(); // Preparo variabili per il prossimo stato
     currentScanStatus = ENDED; // Scansione terminata
     sendSocketMessage(); // Mando il messaggio via WebSocket
-    if (devMode) Serial.println("Scansione terminata");
-    delay(1000); // Delay per evitare doppia pressione tasti
+    if (devMode) Serial.println("Scansione terminata!");
+    successBlinkingLed(); // Lampeggio LED verde + delay per evitare doppia pressione tasti
     stato = 5; // Passo allo stato finale
 }
 
@@ -352,11 +359,11 @@ void stato2() {
         timerCounter = 0; // Reset timer
         if (i > 5000) {
             Fi0 = Fi0 / 5001;
-            LedPWM(); // Gestione LED megnetismo
+            // LedPWM(); // Gestione LED megnetismo
             if (devMode) Serial.println(Fi0, 1); // Stampo valore di riferimento
             addReferenceValueToCsv(); // Aggiungo il valore di riferimento al CSV
             sendSocketMessage(); // Mando il messaggio via WebSocket
-            delay(2000); // Delay per visualizzare il valore di riferimento sul front-end
+            successBlinkingLed(); // Lampeggio LED verde + delay per visualizzare il valore di riferimento sul front-end
             i = 0; // Reset contatore
             currentScanStatus = SCANNING; // Setto stato SCANNING
             sendSocketMessage(); // Mando il messaggio via WebSocket
