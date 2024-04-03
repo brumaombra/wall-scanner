@@ -44,7 +44,7 @@ Stati lettura:
 // Variabili globali
 PS2MouseHandler mouse(MOUSE_CLOCK, MOUSE_DATA, PS2_MOUSE_REMOTE); // Istanza mouse
 unsigned int stato = 0; // Stato switch
-enum scanStatus { READY = 0, SCANNING = 1, ENDED = 2 }; // Stati della scansione
+enum scanStatus { READY = 0, TUNING = 1, SCANNING = 2, ENDED = 3 }; // Stati della scansione
 scanStatus currentScanStatus = READY; // Stato della scansione
 volatile unsigned long timerCounter = 0;
 volatile float delta = 0;
@@ -88,9 +88,9 @@ void LedPWM() {
 
 // Aggiungo il valore di riferimento al CSV
 void addReferenceValueToCsv() {
-    char tempBuffer[30];
-    sprintf(tempBuffer, "%.1f;", Fi0);
-    strcat(csvString, tempBuffer);
+    // char tempBuffer[30];
+    sprintf(csvString, "%.1f;", Fi0);
+    // strcat(csvString, tempBuffer);
 }
 
 // Creo la string CSV
@@ -159,6 +159,13 @@ void sendSocketMessage() {
     char json[jsonLength];
     serializeJson(doc, json, sizeof(json));
     ws.textAll(json); // Invio il messaggio
+}
+
+// Mando il messaggio tramite WebSocket al front-end con polling
+void pollingSocketClient(const int frequence) {
+    if (millis() - prevMillis < frequence) return; // Solo ogni tot tempo, se no esco
+    prevMillis = millis(); // Aggiorno prevMillis
+    sendSocketMessage(); // Mando il messaggio via WebSocket
 }
 
 // Gestisco la risposta del Websocket
@@ -289,9 +296,13 @@ void navToStato5() {
 
 // Stato iniziale
 void stato0() {
-    if (digitalRead(BUTTON)) return; // Se il pulsante non è premuto non faccio niente
-    if (devMode) Serial.println("Pulsante premuto!");
+    pollingSocketClient(3000); // Mando stato ogni 3 secondi
+    
+    // Se il pulsante non è premuto non faccio niente
+    if (digitalRead(BUTTON)) return;
     resetVariabiliLoop(); // Preparo variabili per il prossimo stato
+    currentScanStatus = TUNING; // Calibrazione iniziata
+    if (devMode) Serial.println("Pulsante premuto! Comincio taratura bobina...");
     delay(1000); // Delay per evitare doppia pressione tasti
     stato = 1; // Passo allo stato 1
 }
@@ -308,8 +319,10 @@ void stato1() {
         timerCounter = 0; // Reset timer
         if (i > 600) {
             delta = delta / 601; // Calcolo media
-            LedPWM();
-            Serial.println(delta, 1);
+            LedPWM(); // Gestione LED megnetismo
+            if (devMode) Serial.println(delta, 1);
+            sprintf(csvString, "%.1f", delta); // Riempio la variabile del CSV con un solo valore
+            pollingSocketClient(1000); // Mando dato ogni secondo
             i = 0; // Reset contatore
             delta = 0; // Reset delta
         } else {
@@ -321,7 +334,7 @@ void stato1() {
     LastRX = RXval; // Aggiorno valore RX
 
     if (digitalRead(BUTTON)) return; // Se il pulsante non è premuto esco
-    if (devMode) Serial.println("----------");
+    if (devMode) Serial.print("Valore di riferimento: ");
     resetVariabiliLoop(); // Preparo variabili per il prossimo stato
     delay(1000); // Delay per evitare doppia pressione tasti
     stato = 2; // Passo al prossimo stato
@@ -339,10 +352,15 @@ void stato2() {
         timerCounter = 0; // Reset timer
         if (i > 5000) {
             Fi0 = Fi0 / 5001;
-            Serial.println(Fi0, 1);
+            LedPWM(); // Gestione LED megnetismo
+            if (devMode) Serial.println(Fi0, 1); // Stampo valore di riferimento
             addReferenceValueToCsv(); // Aggiungo il valore di riferimento al CSV
-            LedPWM();
+            sendSocketMessage(); // Mando il messaggio via WebSocket
+            delay(2000); // Delay per visualizzare il valore di riferimento sul front-end
             i = 0; // Reset contatore
+            currentScanStatus = SCANNING; // Setto stato SCANNING
+            sendSocketMessage(); // Mando il messaggio via WebSocket
+            if (devMode) Serial.println("Scansione avviata...");
             stato = 3; // Passo al prossimo stato
         } else {
             i++; // Incremento contatore
@@ -357,7 +375,7 @@ void stato2() {
 void stato3() {
     if (millis() - prevMillis < 200) return; // Se non sono passati 200 ms, non faccio nulla
     prevMillis = millis(); // Aggiorno prevMillis
-    LedPWM();
+    LedPWM(); // Gestione LED megnetismo
     mouse.get_data(); // Leggo dati dal mouse
     XVal += mouse.x_movement(); // Prendo movimento x
     YVal += mouse.y_movement(); // Prendo movimento y
@@ -371,7 +389,6 @@ void stato3() {
     }
     if ((Xcm - int(Xcm / NCM) * NCM > float(NCM) / 3) && (Xcm - int(Xcm / NCM) * NCM < float(NCM) * 2 / 3) && OKXY) {
         OKXY = false;
-        // resetVariabiliLoop(); // Preparo variabili per il prossimo stato
         stato = 4; // Passo al prossimo stato
     }
 
@@ -393,11 +410,10 @@ void stato4() {
         if (i > 500) {
             i = 0; // Reset contatore
             delta = delta / 501;
-            currentScanStatus = SCANNING; // Setto stato SCANNING
+            // currentScanStatus = SCANNING; // Setto stato SCANNING
             writeCsv(int(Xcm / NCM), int(Ycm / NCM), delta); // Aggiungo al CSV
             sendSocketMessage(); // Mando il messaggio via WebSocket
-            LedPWM();
-            // resetVariabiliLoop(); // Preparo variabili per il prossimo stato
+            LedPWM(); // Gestione LED megnetismo
             stato = 3; // Torno allo stato 3
         } else {
             i++; // Incremento contatore
@@ -414,14 +430,14 @@ void stato4() {
 
 // Termino scansione e mando dati completi a front-end
 void stato5() {
-    if (millis() - prevMillis > 3000) { // Ogni 3 secondi
-        prevMillis = millis(); // Aggiorno prevMillis
-        sendSocketMessage(); // Mando il messaggio via WebSocket
-    }
+    pollingSocketClient(3000); // Mando heatmap completa ogni 3 secondi
 
-    if (digitalRead(BUTTON)) return; // Se il pulsante non è premuto esco
+    // Se il pulsante non è premuto esco
+    if (digitalRead(BUTTON)) return;
     csvString[0] = '\0'; // Svuoto CSV
     currentScanStatus = READY; // Pronto per nuova scansione
+    sendSocketMessage(); // Mando il messaggio via WebSocket
+    resetVariabiliLoop(); // Preparo variabili per il prossimo stato
     if (devMode) Serial.println("Pronto per nuova scansione, premi il pulsante per iniziare la calibrazione");
     delay(1000); // Delay per evitare doppia pressione tasti
     stato = 0; // Ricomincio il ciclo

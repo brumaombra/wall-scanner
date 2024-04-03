@@ -57,6 +57,16 @@
             <h2>Fai la tua prima scansione!</h2>
             <p>Premi il pulsante sul <b>Wall Scanner</b> per cominciare una nuova scansione!</p>
         </div>
+
+        <!-- Calibrazione -->
+        <div id="tuningContainer" class="content-center hidden">
+            <h2>Calibrazione...</h2>
+            <p>Calibrazione in corso, <b>muovi la bobina</b> per raggiungere un valore neutro</p>
+            <div class="d-flex justify-content-center align-items-center">
+                <i id="tuningIcon" class="fa-solid fa-wave-square fs-3 me-3"></i>
+                <h1 id="tuningValue"></h2>
+            </div>
+        </div>
     </div>
 
     <!-- Modal impostazioni -->
@@ -80,7 +90,7 @@
                         <div class="form-text">La risoluzione in cm della scansione</div>
                     </div>
 
-                    <!-- Valori intensità -->
+                    <!-- Valori intensità
                     <div class="mb-3">
                         <label class="form-label">Valori intensità</label>
                         <select id="settingsValues" class="form-select">
@@ -89,7 +99,7 @@
                             <option value="NORM">Mag. normalizzato</option>
                         </select>
                         <div class="form-text">L'intensità del segnale</div>
-                    </div>
+                    </div> -->
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">CHIUDI</button>

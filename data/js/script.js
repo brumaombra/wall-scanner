@@ -4,7 +4,7 @@ const tableCellHeight = "30px";
 const tableCellBorder = "1px solid #34495e";
 const ESP32IP = ""; // "http://localhost:3000"
 let valuesVisible = ""; // Visibilità dei valori di magnetismo ("", "MAG", "NORM")
-const scanStatus = { READY: 0, SCANNING: 1, ENDED: 2 }; // Stato della scansione
+const scanStatus = { READY: 0, TUNING: 1, SCANNING: 2, ENDED: 3 }; // Stato della scansione
 let currentStatus = scanStatus.READY; // Stato attuale della scansione
 
 // Documento pronto
@@ -23,13 +23,14 @@ const init = () => {
             }, () => {
                 setBusy(false); // Busy off
             });
-        }, 500);
-    }, 500);
+        }, 1000);
+    }, 1000);
 };
 
 // Inizializzo il WebSocket
 const initSocket = () => {
-    const socketUrl = `ws://${window.location.host}/ws`; // URL per connettersi al WebSocket
+    // const socketUrl = `ws://${window.location.host}/ws`; // URL per connettersi al WebSocket
+    const socketUrl = `ws://localhost:8080`; // URL per connettersi al WebSocket
     let socket = new WebSocket(socketUrl); // Oggetto WebSocket
     socket.onopen = event => { // Apertura connessione
         console.log("Connessione al WebSocket aperta");
@@ -89,6 +90,9 @@ manageSocketMessage = data => {
         case scanStatus.READY: // L'ESP è in attesa di iniziare una scansione
             manageStatusReady(data);
             break;
+        case scanStatus.TUNING: // L'ESP sta eseguendo la calibrazione
+            manageStatusTuning(data);
+            break;
         case scanStatus.SCANNING: // L'ESP sta eseguendo una scansione
             manageStatusScanning(data);
             break;
@@ -98,15 +102,34 @@ manageSocketMessage = data => {
     }
 };
 
-/*********************************** Creazione della heatmap ***********************************/
-
 // Gestione dello stato READY
 const manageStatusReady = response => {
     if (response.status === this.currentStatus) return; // Se è già uguale esco
     this.currentStatus = response.status || scanStatus.READY; // Aggiorno stato
-    $("#settingsButton").prop("disabled", false); // Abilito il pulsante
+    hideEveryContainer(); // Nascondo tutti i container
     $("#scansionePlaceholder").removeClass("hidden"); // Visualizzo placeholder
-    $("#scansioneContainer").addClass("hidden"); // Nascondo container scansione
+    $("#settingsButton").prop("disabled", false); // Abilito il pulsante impostazioni
+};
+
+// Gestione dello stato TUNING
+const manageStatusTuning = response => {
+    let value = response.data?.toString() || "0"; // Valore di taratura attuale
+    if (value.includes(";")) { // Se contiene la virgola vuol dire che è il valore di riferimento definitivo
+        value = value.split(";")[0]; // Prendo solo il primo valore
+        $("#tuningIcon").addClass("text-success"); // Aggiungo colore verde
+        $("#tuningValue").addClass("text-success"); // Aggiungo colore verde
+    } else {
+        $("#tuningIcon").removeClass("text-success"); // Tolgo verde
+        $("#tuningValue").removeClass("text-success"); // Tolgo verde
+    }
+
+    // Imposto valore
+    $("#tuningValue").text(`${value} ms`);
+    if (response.status === this.currentStatus) return; // Se è già uguale esco
+    this.currentStatus = response.status || scanStatus.READY; // Aggiorno stato
+    hideEveryContainer(); // Nascondo tutti i container
+    $("#tuningContainer").removeClass("hidden"); // Visualizzo container
+    $("#settingsButton").prop("disabled", true); // Disabilito il pulsante impostazioni
 };
 
 // Gestione dello stato SCANNING
@@ -114,10 +137,10 @@ const manageStatusScanning = response => {
     parseCSV(response.data); // Parsing del CSV
     if (response.status === this.currentStatus) return; // Se è già uguale esco
     this.currentStatus = response.status || scanStatus.READY; // Aggiorno stato
-    $("#settingsButton").prop("disabled", true); // Disabilito il pulsante
-    $("#scansionePlaceholder").addClass("hidden"); // Nascondo placeholder
+    hideEveryContainer(); // Nascondo tutti i container
     $("#scansioneContainer").removeClass("hidden"); // Visualizzo container
     $("#recordingLogo").removeClass("hidden"); // Visualizzo logo recording
+    $("#settingsButton").prop("disabled", true); // Disabilito il pulsante impostazioni    
 };
 
 // Gestione dello stato ENDED
@@ -125,12 +148,22 @@ const manageStatusEnded = response => {
     if (response.status === this.currentStatus) return; // Se è già uguale esco
     this.currentStatus = response.status || scanStatus.READY; // Aggiorno stato
     parseCSV(response.data); // Parsing del CSV
-    $("#settingsButton").prop("disabled", false); // Abilito il pulsante
+    hideEveryContainer(); // Nascondo tutti i container
     $("#scansioneContainer").removeClass("hidden"); // Visualizzo container
+    $("#successReadLogo").removeClass("hidden"); // Visualizzo messaggio success
+    $("#settingsButton").prop("disabled", false); // Abilito il pulsante impostazioni
+};
+
+// Nascondo tutti i container
+const hideEveryContainer = () => {
+    $("#tuningContainer").addClass("hidden"); // Nascondo container
+    $("#scansioneContainer").addClass("hidden"); // Nascondo container scansione
     $("#scansionePlaceholder").addClass("hidden"); // Nascondo placeholder
     $("#recordingLogo").addClass("hidden"); // Nascondo logo recording
-    $("#successReadLogo").removeClass("hidden"); // Visualizzo messaggio success
+    $("#successReadLogo").addClass("hidden"); // Nascondo logo success
 };
+
+/*********************************** Creazione della heatmap ***********************************/
 
 // Faccio il parsing del CSV
 const parseCSV = text => {
@@ -139,6 +172,7 @@ const parseCSV = text => {
         rows = text.split(";").map(row => row.split(","));
         reference = parseFloat(rows[0] || 0); // Valore di riferimento
         rows = rows.filter(item => item.length === 3); // Prendo solo righe valide (Con i 3 valori)
+        if (rows.length === 0) return; // Se vuoto esco
     } catch (e) {
         console.log("Errore durante la pulizia e suddivisione del CSV:", e);
         return;
