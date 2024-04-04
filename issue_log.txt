@@ -1,0 +1,8 @@
+---------- TODO ----------
+
+1. OK - Lampeggio success
+2. OK - Resettare coordinate una volta terminata la scansione
+3. OK - Albero di Natale iniziale
+4. OK - Svuotare tabella HTML una volta terminata la scansione
+5. OK - Togliere normalizzazione (parametrizzabile)
+6. Reset variabili coordinate nel punto corretto

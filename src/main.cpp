@@ -1,15 +1,3 @@
-/*
-
----------- TODO ----------
-
-1. OK - Lampeggio success
-2. OK - Resettare coordinate una volta terminata la scansione
-3. OK - Albero di Natale iniziale
-4. OK - Svuotare tabella HTML una volta terminata la scansione
-5. OK - Togliere normalizzazione (parametrizzabile)
-
-*/
-
 #include <Arduino.h>
 #include <Preferences.h>
 #include <WiFi.h>
@@ -50,7 +38,7 @@ byte NCM = 3; // Numero di cm ogni quanto fare una misura
 bool normalizeValues = false; // Per capire se normalizzare i valori
 bool displayValuesOnMap = false; // Se visualizzare i valori sulla heatmap
 bool OKXY = true; // Per capire se ho già misurato in un certo 
-bool devMode = true; // Per capire se stampare i valori
+bool devMode = false; // Per capire se stampare i valori
 bool TXval, RXval, LastTX, LastRX; // Valori PIN
 const char accessPointSSID[] = "Wall-scanner"; // SSID access point
 char csvString[10000] = ""; // Stringa per salvare i dati registrati
@@ -273,7 +261,7 @@ void turnOnOffAllLed(const bool on) {
 // Faccio un test di tutti i LED
 void testAllLedSequence() {
     const int singleLedDelay = 150; // Delay tra accensione singoli LED
-    const int allLedDelay = 500; // Delay tra accesione tutti i LED
+    const int allLedDelay = 1000; // Delay tra accesione tutti i LED
     turnOnOffAllLed(false); // Spengo tutti i LED
     ledcWrite(REDCH, 255); // Accendo LED rosso
     delay(singleLedDelay);
@@ -284,12 +272,12 @@ void testAllLedSequence() {
     digitalWrite(upperLED, HIGH); // Accendo LED sopra
     delay(singleLedDelay);
     digitalWrite(upperLED, LOW); // Spengo LED sopra
-    digitalWrite(lowerLED, HIGH); // Accendo LED sotto
+    digitalWrite(centralLED, HIGH); // Accendo LED sotto
     delay(singleLedDelay);
-    digitalWrite(lowerLED, LOW); // Spengo LED sotto
-    digitalWrite(centralLED, HIGH); // Accendo LED centrale
+    digitalWrite(centralLED, LOW); // Spengo LED sotto
+    digitalWrite(lowerLED, HIGH); // Accendo LED centrale
     delay(singleLedDelay);
-    digitalWrite(centralLED, LOW); // Spengo LED centrale
+    digitalWrite(lowerLED, LOW); // Spengo LED centrale
     delay(singleLedDelay);
     turnOnOffAllLed(true); // Accendo tutti i LED
     delay(allLedDelay);
@@ -482,7 +470,8 @@ void stato5() {
     currentScanStatus = READY; // Pronto per nuova scansione
     sendSocketMessage(); // Mando il messaggio via WebSocket
     resetVariabiliLoop(); // Preparo variabili per il prossimo stato
-    setupMouse(); // Rifaccio inizializzazione del mouse
+    XVal = 0; // Reset coordinate
+    YVal = 0; // Reset coordinate
     if (devMode) Serial.println("Pronto per nuova scansione, premi il pulsante per iniziare la calibrazione");
     delay(1000); // Delay per evitare doppia pressione tasti
     stato = 0; // Ricomincio il ciclo

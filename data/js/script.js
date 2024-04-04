@@ -111,6 +111,7 @@ const manageStatusReady = response => {
     hideEveryContainer(); // Nascondo tutti i container
     $("#scansionePlaceholder").removeClass("hidden"); // Visualizzo placeholder
     $("#settingsButton").prop("disabled", false); // Abilito il pulsante impostazioni
+    $("#tableContainer").html(""); // Svuoto tabella
 };
 
 // Gestione dello stato TUNING
@@ -132,6 +133,7 @@ const manageStatusTuning = response => {
     hideEveryContainer(); // Nascondo tutti i container
     $("#tuningContainer").removeClass("hidden"); // Visualizzo container
     $("#settingsButton").prop("disabled", true); // Disabilito il pulsante impostazioni
+    $("#tableContainer").html(""); // Svuoto tabella
 };
 
 // Gestione dello stato SCANNING
@@ -163,7 +165,6 @@ const hideEveryContainer = () => {
     $("#scansionePlaceholder").addClass("hidden"); // Nascondo placeholder
     $("#recordingLogo").addClass("hidden"); // Nascondo logo recording
     $("#successReadLogo").addClass("hidden"); // Nascondo logo success
-    $("#tableContainer").html(""); // Svuoto tabella
 };
 
 /*********************************** Creazione della heatmap ***********************************/
