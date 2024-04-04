@@ -3,7 +3,6 @@ const tableCellWidth = "30px";
 const tableCellHeight = "30px";
 const tableCellBorder = "1px solid #34495e";
 const ESP32IP = ""; // "http://localhost:3000"
-let valuesVisible = ""; // Visibilità dei valori di magnetismo ("", "MAG", "NORM")
 const scanStatus = { READY: 0, TUNING: 1, SCANNING: 2, ENDED: 3 }; // Stato della scansione
 let currentStatus = scanStatus.READY; // Stato attuale della scansione
 
@@ -55,6 +54,8 @@ const getConfuguration = (successCallback, errorCallback) => {
         return response.json(); // Prendo il JSON
     }).then(data => {
         $("#settingsResolution").val(data.resolution || "3"); // Imposto risoluzione scansione
+        $("#settingsNormalizzazione").val(data.normalize ? "ON" : "OFF"); // Imposto normalizzazione valori
+        $("#settingsDisplayValues").val(data.displayValues ? "ON" : "OFF"); // Imposto visualizzazione valori
         successCallback(); // Success callback
     }).catch(error => {
         showToast("ERROR", "Errore: impostazioni non caricate"); // Mostro toast
@@ -67,13 +68,14 @@ const getConfuguration = (successCallback, errorCallback) => {
 const handleSaveSettingsPress = () => {
     setBusy(true); // Busy on
     const queryString = new URLSearchParams({ // Creo la query string
-        resolution: $("#settingsResolution").val() || ""
+        resolution: $("#settingsResolution").val() || "3",
+        normalize: $("#settingsNormalizzazione").val() === "ON",
+        displayValues: $("#settingsDisplayValues").val() === "ON"
     }).toString();
     fetch(`${ESP32IP}/setSettings?${queryString}`).then(response => {
         return response.json(); // Prendo il JSON
     }).then(data => {
         setBusy(false); // Busy off
-        valuesVisible = $("#settingsValues").val(); // Salvo impostazione visibilità valori
         showToast("SUCCESS", "Impostazioni salvate!"); // Mostro toast
     }).catch(error => {
         setBusy(false); // Busy off
@@ -161,13 +163,14 @@ const hideEveryContainer = () => {
     $("#scansionePlaceholder").addClass("hidden"); // Nascondo placeholder
     $("#recordingLogo").addClass("hidden"); // Nascondo logo recording
     $("#successReadLogo").addClass("hidden"); // Nascondo logo success
+    $("#tableContainer").html(""); // Svuoto tabella
 };
 
 /*********************************** Creazione della heatmap ***********************************/
 
 // Faccio il parsing del CSV
 const parseCSV = text => {
-    let rows, reference;
+    let rows, reference, normalizeMagValues = $("#settingsNormalizzazione").val() === "ON";
     try {
         rows = text.split(";").map(row => row.split(","));
         reference = parseFloat(rows[0] || 0); // Valore di riferimento
@@ -193,7 +196,7 @@ const parseCSV = text => {
         return;
     }
 
-    // Normalizzo le serie
+    // Normalizzo le serie e aggiungo differenza valori
     try {
         leftSeries = normalizeSerires(leftSeries); // Normalizzo la serie di sinistra
         rightSeries = normalizeSerires(rightSeries); // Normalizzo la serie di destra
@@ -206,9 +209,9 @@ const parseCSV = text => {
     const rainbowBlue = new Rainbow();
     const rainbowRed = new Rainbow();
     try {
-        rainbowBlue.setNumberRange(1, 100);
+        rainbowBlue.setNumberRange(1, normalizeMagValues ? 100 : 10);
         rainbowBlue.setSpectrum("white", "blue");
-        rainbowRed.setNumberRange(1, 100);
+        rainbowRed.setNumberRange(1, normalizeMagValues ? 100 : 10);
         rainbowRed.setSpectrum("white", "red");
     } catch (e) {
         console.log("Errore durante la creazione degli oggetti Rainbow:", e);
@@ -220,17 +223,23 @@ const parseCSV = text => {
         rows.forEach(row => {
             const x = parseInt(row[0]);
             const y = parseInt(row[1]);
-            let mag = parseFloat(row[2]), magNorm, color;
-            if (mag < reference) { // Prendo i valori normalizzati
-                magNorm = parseInt(leftSeries.filter(item => item.original == mag)[0].absDifferenceNorm) || 0;
-                color = rainbowBlue.colourAt(magNorm); // Prendo la gradazione giusta
+            let mag = parseFloat(row[2]), absDifferenceValue, color;
+            if (mag < reference) { // Prendo i valori
+                if (normalizeMagValues) // Normalizzato o non
+                    absDifferenceValue = parseInt(leftSeries.filter(item => item.original == mag)[0].absDifferenceNorm) || 0;
+                else
+                    absDifferenceValue = parseInt(leftSeries.filter(item => item.original == mag)[0].absDifference) || 0;
+                color = rainbowBlue.colourAt(absDifferenceValue); // Prendo la gradazione giusta
             } else {
-                magNorm = parseInt(rightSeries.filter(item => item.original == mag)[0].absDifferenceNorm) || 0;
-                color = rainbowRed.colourAt(magNorm); // Prendo la gradazione giusta
+                if (normalizeMagValues) // Normalizzato o non
+                    absDifferenceValue = parseInt(rightSeries.filter(item => item.original == mag)[0].absDifferenceNorm) || 0;
+                else
+                    absDifferenceValue = parseInt(rightSeries.filter(item => item.original == mag)[0].absDifference) || 0;
+                color = rainbowRed.colourAt(absDifferenceValue); // Prendo la gradazione giusta
             }
 
             // Aggiungo a mapping
-            dataMap.set(`${x},${y}`, { color: `#${color}`, mag: mag, magNorm: magNorm });
+            dataMap.set(`${x},${y}`, { color: `#${color}`, mag: mag, absDifferenceValue: absDifferenceValue });
         });
     } catch (e) {
         console.log("Errore durante la creazione del mapping:", e);
@@ -272,9 +281,9 @@ const createTable = (width, height, dataMap) => {
             const key = `${x},${y}`;
             if (dataMap.has(key)) {
                 td.style.backgroundColor = dataMap.get(key).color; // Prendo colore
-                if (valuesVisible !== "") { // Se impostazione attiva, aggiungo valori
+                if ($("#settingsDisplayValues").val() === "ON") { // Se impostazione attiva, aggiungo valori
                     td.style.color = getContrastColor(td.style.backgroundColor); // Prendo bianco o nero
-                    td.textContent = valuesVisible === "MAG" ? parseInt(dataMap.get(key).mag) : dataMap.get(key).magNorm; // Prendo il valore
+                    td.textContent = parseInt(dataMap.get(key).mag); // Prendo il valore
                 }
             }
             tr.appendChild(td);

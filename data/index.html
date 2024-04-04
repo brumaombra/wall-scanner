@@ -90,16 +90,25 @@
                         <div class="form-text">La risoluzione in cm della scansione</div>
                     </div>
 
-                    <!-- Valori intensità
+                    <!-- Impostazione normalizzazione -->
+                    <div class="mb-3">
+                        <label class="form-label">Normalizzazione valori</label>
+                        <select id="settingsNormalizzazione" class="form-select">
+                            <option value="ON">Attiva</option>
+                            <option selected value="OFF">Disattiva</option>
+                        </select>
+                        <div class="form-text">Se normalizzare i valori di magnetismo</div>
+                    </div>
+
+                    <!-- Valori intensità -->
                     <div class="mb-3">
                         <label class="form-label">Valori intensità</label>
-                        <select id="settingsValues" class="form-select">
-                            <option selected value="">Nessuno</option>
-                            <option value="MAG">Magnetismo</option>
-                            <option value="NORM">Mag. normalizzato</option>
+                        <select id="settingsDisplayValues" class="form-select">
+                            <option value="ON">Visualizza</option>
+                            <option selected value="OFF">Nascondi</option>
                         </select>
-                        <div class="form-text">L'intensità del segnale</div>
-                    </div> -->
+                        <div class="form-text">Visualizza l'intensità del segnale sulla mappa</div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">CHIUDI</button>

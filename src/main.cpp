@@ -1,22 +1,12 @@
 /*
 
------------ WORKFLOW -----------
-1. Accendo l'ESP
-2. ESP pronto
-3. Mi collego al WiFi
-4. Parte il polling per capire cosa sta facendo l'ESP
-5. La pagina web si sincronizza con l'ESP
+---------- TODO ----------
 
-Stati lettura:
-- READY: l'ESP è in attesa di far partire una scansione
-- SCANNING: La scansione è in corso
-- ENDED: Scansione terminata
-
------------ WORKFLOW PAGINA WEB -----------
-1. Parte il polling
-    1a. Se la scansione non è ancora partita faccio vedere una pagina web che dice di premere il pulsante sull'ESP
-    1b. Se la scansione è già in corso mi sincronizzo e faccio vedere la heath map
-    1c. Se la scansione è terminata faccio vedere il risultato
+1. OK - Lampeggio success
+2. OK - Resettare coordinate una volta terminata la scansione
+3. OK - Albero di Natale iniziale
+4. OK - Svuotare tabella HTML una volta terminata la scansione
+5. OK - Togliere normalizzazione (parametrizzabile)
 
 */
 
@@ -57,6 +47,8 @@ int XVal = 0, YVal = 0;
 int Xprec = 0, Yprec = 0;
 float Xcm = 0, Ycm = 0;
 byte NCM = 3; // Numero di cm ogni quanto fare una misura
+bool normalizeValues = false; // Per capire se normalizzare i valori
+bool displayValuesOnMap = false; // Se visualizzare i valori sulla heatmap
 bool OKXY = true; // Per capire se ho già misurato in un certo 
 bool devMode = true; // Per capire se stampare i valori
 bool TXval, RXval, LastTX, LastRX; // Valori PIN
@@ -85,9 +77,7 @@ void LedPWM() {
 
 // Aggiungo il valore di riferimento al CSV
 void addReferenceValueToCsv() {
-    // char tempBuffer[30];
     sprintf(csvString, "%.1f;", Fi0);
-    // strcat(csvString, tempBuffer);
 }
 
 // Creo la string CSV
@@ -131,6 +121,8 @@ bool setupLittleFS() {
 bool readConfig() {
     preferences.begin("config", false);
     NCM = preferences.getInt("resolution", NCM); // Risoluzione scansione
+    normalizeValues = preferences.getBool("normalize", normalizeValues); // Se visualizzare i valori
+    displayValuesOnMap = preferences.getBool("displayValues", displayValuesOnMap); // Se visualizzare i valori sulla heatmap
     preferences.end();
     if (devMode) Serial.println("Configurazione caricata correttamente");
     return true; // Tutto OK
@@ -140,6 +132,8 @@ bool readConfig() {
 bool writeConfig() {
     preferences.begin("config", false);
     preferences.putInt("resolution", NCM); // Risoluzione scansione
+    preferences.putBool("normalize", normalizeValues); // Se visualizzare i valori
+    preferences.putBool("displayValues", displayValuesOnMap); // Se visualizzare i valori sulla heatmap
     preferences.end();
     if (devMode) Serial.println("Configurazione salvata correttamente");
     return true; // Tutto OK
@@ -205,6 +199,8 @@ bool setupServer() {
 	server.on("/getSettings", HTTP_GET, [](AsyncWebServerRequest *request) {
         JsonDocument doc;
         doc["resolution"] = NCM; // Risoluzione scansione
+        doc["normalize"] = normalizeValues; // Se visualizzare i valori
+        doc["displayValues"] = displayValuesOnMap; // Se visualizzare i valori sulla heatmap
         size_t jsonLength = measureJson(doc) + 1; // Grandezza del documento JSON
 		char json[jsonLength];
 		serializeJson(doc, json, sizeof(json));
@@ -215,9 +211,13 @@ bool setupServer() {
 	server.on("/setSettings", HTTP_GET, [](AsyncWebServerRequest *request) {
         String resolution = request->getParam("resolution")->value();
         NCM = resolution.toInt(); // Sovrascrivo risoluzione
+        normalizeValues = request->getParam("normalize")->value() == "true";
+        displayValuesOnMap = request->getParam("displayValues")->value() == "true";
         writeConfig(); // Salvo la configurazione
         JsonDocument doc;
         doc["resolution"] = NCM; // Mando la variabile aggiornata al front-end
+        doc["normalize"] = normalizeValues; // Mando la variabile aggiornata al front-end
+        doc["displayValues"] = displayValuesOnMap; // Mando la variabile aggiornata al front-end
         size_t jsonLength = measureJson(doc) + 1; // Grandezza del documento JSON
 		char json[jsonLength];
 		serializeJson(doc, json, sizeof(json));
@@ -261,6 +261,53 @@ bool setupMouse() {
     }
 }
 
+// Accendo/spengo tutti i LED
+void turnOnOffAllLed(const bool on) {
+    ledcWrite(REDCH, on ? 255 : 0); // LED rosso
+    ledcWrite(YELLCH, on ? 255 : 0); // LED blu
+    digitalWrite(upperLED, on ? HIGH : LOW); // LED sopra
+    digitalWrite(lowerLED, on ? HIGH : LOW); // LED sotto
+    digitalWrite(centralLED, on ? HIGH : LOW); // LED centrale
+}
+
+// Faccio un test di tutti i LED
+void testAllLedSequence() {
+    const int singleLedDelay = 150; // Delay tra accensione singoli LED
+    const int allLedDelay = 500; // Delay tra accesione tutti i LED
+    turnOnOffAllLed(false); // Spengo tutti i LED
+    ledcWrite(REDCH, 255); // Accendo LED rosso
+    delay(singleLedDelay);
+    ledcWrite(REDCH, 0); // Spengo LED rosso
+    ledcWrite(YELLCH, 255); // Accendo LED blu
+    delay(singleLedDelay);
+    ledcWrite(YELLCH, 0); // Spengo LED blu
+    digitalWrite(upperLED, HIGH); // Accendo LED sopra
+    delay(singleLedDelay);
+    digitalWrite(upperLED, LOW); // Spengo LED sopra
+    digitalWrite(lowerLED, HIGH); // Accendo LED sotto
+    delay(singleLedDelay);
+    digitalWrite(lowerLED, LOW); // Spengo LED sotto
+    digitalWrite(centralLED, HIGH); // Accendo LED centrale
+    delay(singleLedDelay);
+    digitalWrite(centralLED, LOW); // Spengo LED centrale
+    delay(singleLedDelay);
+    turnOnOffAllLed(true); // Accendo tutti i LED
+    delay(allLedDelay);
+    turnOnOffAllLed(false); // Spengo tutti i LED
+}
+
+// Lampeggio di successo LED verde (Delay totale 1200ms)
+void successBlinkingLed() {
+    turnOnOffAllLed(false); // Spengo tutti i LED
+    for (int counter = 0; counter < 3; counter++) {
+        digitalWrite(centralLED, LOW); // Spengo LED verde
+        delay(200);
+        digitalWrite(centralLED, HIGH); // Accendo LED verde
+        delay(200);
+    }
+    digitalWrite(centralLED, LOW); // Spengo LED verde
+}
+
 // Setup
 void setup() {
     if (devMode) Serial.begin(115200); // Inizializzo la seriale
@@ -269,19 +316,9 @@ void setup() {
     setupServer(); // Setup server web
     setupPin(); // Setup dei pin
     setupMouse(); // Setup del mouse
+    testAllLedSequence(); // Test di tutti i LED
     if (devMode) Serial.println("Setup OK");
     if (devMode) Serial.println("Pronto per nuova scansione, premi il pulsante per iniziare la calibrazione");
-}
-
-// Lampeggio di successo LED verde (Delay totale 1200ms)
-void successBlinkingLed() {
-    for (int counter = 0; counter < 3; counter++) {
-        digitalWrite(centralLED, LOW);
-        delay(200);
-        digitalWrite(centralLED, HIGH);
-        delay(200);
-    }
-    digitalWrite(centralLED, LOW); // Spengo
 }
 
 // Resetto le variabili usate nel loop
@@ -330,7 +367,7 @@ void stato1() {
             LedPWM(); // Gestione LED megnetismo
             if (devMode) Serial.println(delta, 1);
             sprintf(csvString, "%.1f", delta); // Riempio la variabile del CSV con un solo valore
-            pollingSocketClient(1000); // Mando dato ogni secondo
+            pollingSocketClient(500); // Mando dato ogni mezzo secondo
             i = 0; // Reset contatore
             delta = 0; // Reset delta
         } else {
@@ -360,12 +397,11 @@ void stato2() {
         timerCounter = 0; // Reset timer
         if (i > 5000) {
             Fi0 = Fi0 / 5001;
-            // LedPWM(); // Gestione LED megnetismo
             if (devMode) Serial.println(Fi0, 1); // Stampo valore di riferimento
             addReferenceValueToCsv(); // Aggiungo il valore di riferimento al CSV
             sendSocketMessage(); // Mando il messaggio via WebSocket
-            successBlinkingLed(); // Lampeggio LED verde + delay per visualizzare il valore di riferimento sul front-end
-            delay(700); // Delay aggiuntivo per arrivare a 2500ms
+            successBlinkingLed(); // Lampeggio LED verde
+            delay(1800); // Delay aggiuntivo per arrivare a 3000ms
             i = 0; // Reset contatore
             currentScanStatus = SCANNING; // Setto stato SCANNING
             sendSocketMessage(); // Mando il messaggio via WebSocket
@@ -419,7 +455,6 @@ void stato4() {
         if (i > 500) {
             i = 0; // Reset contatore
             delta = delta / 501;
-            // currentScanStatus = SCANNING; // Setto stato SCANNING
             writeCsv(int(Xcm / NCM), int(Ycm / NCM), delta); // Aggiungo al CSV
             sendSocketMessage(); // Mando il messaggio via WebSocket
             LedPWM(); // Gestione LED megnetismo
@@ -447,6 +482,7 @@ void stato5() {
     currentScanStatus = READY; // Pronto per nuova scansione
     sendSocketMessage(); // Mando il messaggio via WebSocket
     resetVariabiliLoop(); // Preparo variabili per il prossimo stato
+    setupMouse(); // Rifaccio inizializzazione del mouse
     if (devMode) Serial.println("Pronto per nuova scansione, premi il pulsante per iniziare la calibrazione");
     delay(1000); // Delay per evitare doppia pressione tasti
     stato = 0; // Ricomincio il ciclo
