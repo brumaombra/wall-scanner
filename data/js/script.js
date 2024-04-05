@@ -15,14 +15,13 @@ $(document).ready(() => {
 // Funzione init
 const init = () => {
     setTimeout(() => {
-        initSocket(); // Inizializzo il WebSocket
-        setTimeout(() => {
-            getConfuguration(() => { // Prendo la configurazione iniziale
-                setBusy(false); // Busy off
-            }, () => {
-                setBusy(false); // Busy off
-            });
-        }, 1000);
+        getConfuguration(() => { // Prendo la configurazione iniziale
+            initSocket(); // Inizializzo il WebSocket
+            setBusy(false); // Busy off
+        }, () => {
+            initSocket(); // Inizializzo il WebSocket
+            setBusy(false); // Busy off
+        });
     }, 1000);
 };
 

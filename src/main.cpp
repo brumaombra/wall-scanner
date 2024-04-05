@@ -260,7 +260,7 @@ void turnOnOffAllLed(const bool on) {
 
 // Faccio un test di tutti i LED
 void testAllLedSequence() {
-    const int singleLedDelay = 150; // Delay tra accensione singoli LED
+    const int singleLedDelay = 200; // Delay tra accensione singoli LED
     const int allLedDelay = 1000; // Delay tra accesione tutti i LED
     turnOnOffAllLed(false); // Spengo tutti i LED
     ledcWrite(REDCH, 255); // Accendo LED rosso
@@ -284,29 +284,33 @@ void testAllLedSequence() {
     turnOnOffAllLed(false); // Spengo tutti i LED
 }
 
-// Lampeggio di successo LED verde (Delay totale 1200ms)
-void successBlinkingLed() {
+// Lampeggio di successo o errore LED (Delay totale 1200ms)
+void blinkingLedSequence(const bool success) {
     turnOnOffAllLed(false); // Spengo tutti i LED
     for (int counter = 0; counter < 3; counter++) {
-        digitalWrite(centralLED, LOW); // Spengo LED verde
+        digitalWrite(success ? centralLED : upperLED, LOW); // Spengo LED
         delay(200);
-        digitalWrite(centralLED, HIGH); // Accendo LED verde
+        digitalWrite(success ? centralLED : upperLED, HIGH); // Accendo LED
         delay(200);
     }
-    digitalWrite(centralLED, LOW); // Spengo LED verde
+    digitalWrite(success ? centralLED : upperLED, LOW); // Spengo LED
 }
 
 // Setup
 void setup() {
     if (devMode) Serial.begin(115200); // Inizializzo la seriale
-    setupLittleFS(); // Setup LittleFS
-    readConfig(); // Leggo configurazione salvata
-    setupServer(); // Setup server web
     setupPin(); // Setup dei pin
-    setupMouse(); // Setup del mouse
     testAllLedSequence(); // Test di tutti i LED
-    if (devMode) Serial.println("Setup OK");
-    if (devMode) Serial.println("Pronto per nuova scansione, premi il pulsante per iniziare la calibrazione");
+    readConfig(); // Leggo configurazione salvata
+    const bool initialTest = setupLittleFS() && setupMouse() && setupServer(); // Setup funzioni critiche
+    blinkingLedSequence(initialTest); // Se tutto ok lampeggio verde, se no rosso
+    if (initialTest) { // Setup OK
+        if (devMode) Serial.println("Setup OK");
+        if (devMode) Serial.println("Pronto per nuova scansione, premi il pulsante per iniziare la calibrazione...");
+    } else { // Setup KO
+        if (devMode) Serial.println("Si è verificato un errore durante il setup, esecuzione interrotta");
+        while (true) delay(1000); // Fermo il programma
+    }
 }
 
 // Resetto le variabili usate nel loop
@@ -323,7 +327,7 @@ void navToStato5() {
     currentScanStatus = ENDED; // Scansione terminata
     sendSocketMessage(); // Mando il messaggio via WebSocket
     if (devMode) Serial.println("Scansione terminata!");
-    successBlinkingLed(); // Lampeggio LED verde + delay per evitare doppia pressione tasti
+    blinkingLedSequence(true); // Lampeggio LED verde + delay per evitare doppia pressione tasti
     stato = 5; // Passo allo stato finale
 }
 
@@ -334,6 +338,8 @@ void stato0() {
     // Se il pulsante non è premuto non faccio niente
     if (digitalRead(BUTTON)) return;
     resetVariabiliLoop(); // Preparo variabili per il prossimo stato
+    XVal = 0; // Reset coordinate
+    YVal = 0; // Reset coordinate
     currentScanStatus = TUNING; // Calibrazione iniziata
     if (devMode) Serial.println("Pulsante premuto! Comincio taratura bobina...");
     delay(1000); // Delay per evitare doppia pressione tasti
@@ -388,7 +394,7 @@ void stato2() {
             if (devMode) Serial.println(Fi0, 1); // Stampo valore di riferimento
             addReferenceValueToCsv(); // Aggiungo il valore di riferimento al CSV
             sendSocketMessage(); // Mando il messaggio via WebSocket
-            successBlinkingLed(); // Lampeggio LED verde
+            blinkingLedSequence(true); // Lampeggio LED verde
             delay(1800); // Delay aggiuntivo per arrivare a 3000ms
             i = 0; // Reset contatore
             currentScanStatus = SCANNING; // Setto stato SCANNING
@@ -470,8 +476,6 @@ void stato5() {
     currentScanStatus = READY; // Pronto per nuova scansione
     sendSocketMessage(); // Mando il messaggio via WebSocket
     resetVariabiliLoop(); // Preparo variabili per il prossimo stato
-    XVal = 0; // Reset coordinate
-    YVal = 0; // Reset coordinate
     if (devMode) Serial.println("Pronto per nuova scansione, premi il pulsante per iniziare la calibrazione");
     delay(1000); // Delay per evitare doppia pressione tasti
     stato = 0; // Ricomincio il ciclo

@@ -5,4 +5,6 @@
 3. OK - Albero di Natale iniziale
 4. OK - Svuotare tabella HTML una volta terminata la scansione
 5. OK - Togliere normalizzazione (parametrizzabile)
-6. Reset variabili coordinate nel punto corretto
+6. OK - Reset variabili coordinate nel punto corretto
+7. OK - Prima caricare configurazione, poi connettere al socket
+8. OK - Lampeggio rosso se errore, verde se success
