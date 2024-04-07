@@ -296,6 +296,20 @@ void blinkingLedSequence(const bool success) {
     digitalWrite(success ? centralLED : upperLED, LOW); // Spengo LED
 }
 
+// Lampeggio di due LED rossi (Delay totale 1200ms)
+void blikingErrorSequence(const bool keepOn) {
+    turnOnOffAllLed(false); // Spengo tutti i LED
+    for (int counter = 0; counter < 3; counter++) {
+        digitalWrite(upperLED, LOW); // Spengo LED
+        digitalWrite(lowerLED, LOW); // Spengo LED
+        delay(200);
+        digitalWrite(upperLED, HIGH); // Accendo LED
+        digitalWrite(lowerLED, HIGH); // Accendo LED
+        delay(200);
+    }
+    if (!keepOn) turnOnOffAllLed(false); // Spengo i LED se necessario
+}
+
 // Setup
 void setup() {
     if (devMode) Serial.begin(115200); // Inizializzo la seriale
@@ -303,11 +317,12 @@ void setup() {
     testAllLedSequence(); // Test di tutti i LED
     readConfig(); // Leggo configurazione salvata
     const bool initialTest = setupLittleFS() && setupMouse() && setupServer(); // Setup funzioni critiche
-    blinkingLedSequence(initialTest); // Se tutto ok lampeggio verde, se no rosso
     if (initialTest) { // Setup OK
+        blikingErrorSequence(true); // Se tutto ok lampeggio verde
         if (devMode) Serial.println("Setup OK");
         if (devMode) Serial.println("Pronto per nuova scansione, premi il pulsante per iniziare la calibrazione...");
     } else { // Setup KO
+        blinkingLedSequence(true); // Se errore lampeggio rosso e lascio i LED accesi
         if (devMode) Serial.println("Si è verificato un errore durante il setup, esecuzione interrotta");
         while (true) delay(1000); // Fermo il programma
     }
