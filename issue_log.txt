@@ -6,3 +6,14 @@
 4. OK - Svuotare tabella HTML una volta terminata la scansione
 5. OK - Togliere normalizzazione (parametrizzabile)
 6. Reset variabili coordinate nel punto corretto
+7. Invertire asse Y quando crea l'immagine (adesso quando io mi muovo verso l'alto, l'immagine si aggiorna andando verso il basso)
+8. Quando ho finito di creare l'immagine e cambio l'impostazione che mi fa vedere i numeri al centro del pixel, deve aggiornarsi l'impostazione e visualizzare l'immagine aggiornata.
+9. OK - Gestione del Beeper - GPIO 12 - PWM 50% @ 2kHz
+
+---------- COMMENTI ----------
+
+Ho agiunto il led di batteria scarica chiamato LOWBATLED al pin 2
+Ho allungato il tempo che i LED rimangono accesi ( da 1 secondo a 1.5 secondi)
+I LED adesso si accendono tutti (anche LOW BAT)
+Quando in devMode, ho fatto in modo che i LED rimangano sempre accesi finchè non premo il pulsante
+Questo mi è servito per centrare la posizione dei LED sulla scocca esterna (mi servivano sempre accesi)
