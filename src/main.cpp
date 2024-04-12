@@ -12,12 +12,15 @@
 #define RXPIN 19
 #define REDLED 23
 #define GREENLED 22
-#define upperLED 17
+#define LOWBATLED 2
+#define upperLED 4 // 17 se voglio che quando devo andare in alto si accenda il LED in basso
 #define centralLED 16
-#define lowerLED 4
+#define lowerLED 17 // 4 se voglio che quando devo andare in basso si accenda il LED in alto
 #define BUTTON 15
 #define REDCH 0
 #define YELLCH 1
+#define BEEPER 12
+#define BEEPCH 2
 
 // Variabili globali
 PS2MouseHandler mouse(MOUSE_CLOCK, MOUSE_DATA, PS2_MOUSE_REMOTE); // Istanza mouse
@@ -38,7 +41,6 @@ byte NCM = 3; // Numero di cm ogni quanto fare una misura
 bool normalizeValues = false; // Per capire se normalizzare i valori
 bool displayValuesOnMap = false; // Se visualizzare i valori sulla heatmap
 bool OKXY = true; // Per capire se ho già misurato in un certo 
-bool devMode = false; // Per capire se stampare i valori
 bool TXval, RXval, LastTX, LastRX; // Valori PIN
 const char accessPointSSID[] = "Wall-scanner"; // SSID access point
 char csvString[10000] = ""; // Stringa per salvare i dati registrati
@@ -46,6 +48,7 @@ AsyncWebServer server(80); // Server web
 AsyncWebSocket ws("/ws"); // WebSocket
 int connectedClients = 0; // Numero di client connessi
 Preferences preferences; // Preferenze (Per savare la configurazione)
+bool devMode = true; // Modalità sviluppo
 
 // PWM per i LED
 void LedPWM() {
@@ -230,6 +233,7 @@ void setupPin() {
     pinMode(RXPIN, INPUT);
     pinMode(REDLED, OUTPUT);
     pinMode(GREENLED, OUTPUT);
+    pinMode(LOWBATLED, OUTPUT);
     pinMode(centralLED, OUTPUT);
     pinMode(upperLED, OUTPUT);
     pinMode(lowerLED, OUTPUT);
@@ -237,6 +241,8 @@ void setupPin() {
     ledcAttachPin(REDLED, REDCH);
     ledcSetup(YELLCH, 1000, 8);
     ledcAttachPin(GREENLED, YELLCH);
+    ledcSetup(BEEPCH, 2000, 4); // 4 bit di risoluzione, da 0 a 15
+    ledcAttachPin(BEEPER, BEEPCH);
 }
 
 // Setup mouse
@@ -253,6 +259,7 @@ bool setupMouse() {
 void turnOnOffAllLed(const bool on) {
     ledcWrite(REDCH, on ? 255 : 0); // LED rosso
     ledcWrite(YELLCH, on ? 255 : 0); // LED blu
+    digitalWrite(LOWBATLED, on ? HIGH : LOW); // LED Low Battery
     digitalWrite(upperLED, on ? HIGH : LOW); // LED sopra
     digitalWrite(lowerLED, on ? HIGH : LOW); // LED sotto
     digitalWrite(centralLED, on ? HIGH : LOW); // LED centrale
@@ -269,6 +276,10 @@ void testAllLedSequence() {
     ledcWrite(YELLCH, 255); // Accendo LED blu
     delay(singleLedDelay);
     ledcWrite(YELLCH, 0); // Spengo LED blu
+    digitalWrite(LOWBATLED, HIGH); // Accendo LED LOWBAT
+    delay(singleLedDelay);
+    digitalWrite(LOWBATLED, LOW); // Spengo LED LOWBAT
+    delay(singleLedDelay);
     digitalWrite(upperLED, HIGH); // Accendo LED sopra
     delay(singleLedDelay);
     digitalWrite(upperLED, LOW); // Spengo LED sopra
@@ -280,11 +291,43 @@ void testAllLedSequence() {
     digitalWrite(lowerLED, LOW); // Spengo LED centrale
     delay(singleLedDelay);
     turnOnOffAllLed(true); // Accendo tutti i LED
-    delay(allLedDelay);
+    delay(singleLedDelay);
     turnOnOffAllLed(false); // Spengo tutti i LED
 }
 
-// Lampeggio di successo o errore LED (Delay totale 1200ms)
+// Sequenza beeper iniziale
+void testBeeper() {
+    const int beepDelay = 50; // Delay tra accensione e spegnimento beeper
+    int j, freq = 500;
+    for(j = 1; j < 6; j++) {
+        ledcSetup(BEEPCH, freq * j, 4); // 4 bit di risoluzione, da 0 a 15
+        ledcAttachPin(BEEPER, BEEPCH);
+        ledcWrite(BEEPCH, 7); // Accendo beeper
+        delay(beepDelay);
+        ledcWrite(BEEPCH, 0); // Spengo beeper
+        delay(beepDelay);
+    }
+
+    delay(6 * beepDelay);
+    ledcWrite(BEEPCH, 7); // Accendo beeper
+    delay(6 * beepDelay);
+    ledcWrite(BEEPCH, 0); // Spengo beeper
+    delay(beepDelay);
+}
+
+// Singolo beep
+void beep() {
+    const int beepDelay = 50; // Delay tra accensione e spegnimento beeper
+    int freq = 3000;
+    ledcSetup(BEEPCH, freq, 4); // 4 bit di risoluzione, da 0 a 15
+    ledcAttachPin(BEEPER, BEEPCH);
+    ledcWrite(BEEPCH, 7); // Accendo beeper
+    delay(beepDelay);
+    ledcWrite(BEEPCH, 0); // Spengo beeper
+    delay(beepDelay);
+}
+
+// Lampeggio di successo LED verde (Delay totale 1200ms)
 void blinkingLedSequence(const bool success) {
     turnOnOffAllLed(false); // Spengo tutti i LED
     for (int counter = 0; counter < 3; counter++) {
@@ -315,6 +358,7 @@ void setup() {
     if (devMode) Serial.begin(115200); // Inizializzo la seriale
     setupPin(); // Setup dei pin
     testAllLedSequence(); // Test di tutti i LED
+    testBeeper(); // Test del beeper
     readConfig(); // Leggo configurazione salvata
     const bool initialTest = setupLittleFS() && setupMouse() && setupServer(); // Setup funzioni critiche
     if (initialTest) { // Setup OK
@@ -349,12 +393,15 @@ void navToStato5() {
 // Stato iniziale
 void stato0() {
     pollingSocketClient(3000); // Mando stato ogni 3 secondi
+    if (devMode) turnOnOffAllLed(true);
     
     // Se il pulsante non è premuto non faccio niente
     if (digitalRead(BUTTON)) return;
+    beep(); // Bippo una volta
     resetVariabiliLoop(); // Preparo variabili per il prossimo stato
     XVal = 0; // Reset coordinate
     YVal = 0; // Reset coordinate
+    if (devMode) turnOnOffAllLed(false);
     currentScanStatus = TUNING; // Calibrazione iniziata
     if (devMode) Serial.println("Pulsante premuto! Comincio taratura bobina...");
     delay(1000); // Delay per evitare doppia pressione tasti
@@ -388,6 +435,7 @@ void stato1() {
     LastRX = RXval; // Aggiorno valore RX
 
     if (digitalRead(BUTTON)) return; // Se il pulsante non è premuto esco
+    beep(); // Bippo una volta;
     if (devMode) Serial.print("Valore di riferimento: ");
     resetVariabiliLoop(); // Preparo variabili per il prossimo stato
     delay(1000); // Delay per evitare doppia pressione tasti
@@ -411,6 +459,7 @@ void stato2() {
             sendSocketMessage(); // Mando il messaggio via WebSocket
             blinkingLedSequence(true); // Lampeggio LED verde
             delay(1800); // Delay aggiuntivo per arrivare a 3000ms
+            beep(); // Bippo una volta;
             i = 0; // Reset contatore
             currentScanStatus = SCANNING; // Setto stato SCANNING
             sendSocketMessage(); // Mando il messaggio via WebSocket
@@ -447,8 +496,10 @@ void stato3() {
     }
 
     // Controllo pressione del pulsante
-    if (!digitalRead(BUTTON))
+    if (!digitalRead(BUTTON)){
+        beep(); // Bippo una volta;
         navToStato5(); // Passo allo stato 5
+    }
 }
 
 // Misuro magnetismo e torno a misurare
@@ -477,8 +528,10 @@ void stato4() {
     LastRX = RXval; // Aggiorno valore RX
 
     // Controllo pressione del pulsante
-    if (!digitalRead(BUTTON))
+    if (!digitalRead(BUTTON)){
+        beep(); // Bippo una volta;
         navToStato5(); // Passo allo stato 5
+    }
 }
 
 // Termino scansione e mando dati completi a front-end
@@ -487,6 +540,7 @@ void stato5() {
 
     // Se il pulsante non è premuto esco
     if (digitalRead(BUTTON)) return;
+    beep(); // Bippo una volta;
     csvString[0] = '\0'; // Svuoto CSV
     currentScanStatus = READY; // Pronto per nuova scansione
     sendSocketMessage(); // Mando il messaggio via WebSocket
