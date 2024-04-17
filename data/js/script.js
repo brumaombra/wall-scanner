@@ -5,6 +5,7 @@ const tableCellBorder = "1px solid #34495e";
 const ESP32IP = ""; // "http://localhost:3000"
 const scanStatus = { READY: 0, TUNING: 1, SCANNING: 2, ENDED: 3 }; // Stato della scansione
 let currentStatus = scanStatus.READY; // Stato attuale della scansione
+const taraBobina = 29; // Valore tara bobina
 
 // Documento pronto
 $(document).ready(() => {
@@ -42,8 +43,12 @@ const initSocket = () => {
         console.log(`Errore WebSocket: ${error.message}`);
     };
     socket.onmessage = event => { // Evento di ricezione di un messaggio
-        const json = JSON.parse(event.data); // Faccio il parse della stringa JSON
-        manageSocketMessage(json); // Gestisco il messaggio di risposta
+        try { // Gestisco l'errore di parsing
+            const json = JSON.parse(event.data); // Faccio il parse della stringa JSON
+            manageSocketMessage(json); // Gestisco il messaggio di risposta
+        } catch (error) {
+            console.log(error);
+        }
     };
 };
 
@@ -126,7 +131,10 @@ const manageStatusTuning = response => {
     }
 
     // Imposto valore
-    $("#tuningValue").text(`${value} ms`);
+    value = value / taraBobina * 100; // Normalizzo a 100
+    value = value.toFixed(2); // Arrotondo a due cifre decimali
+    $("#tuningValue").text(value); // Imposto valore
+    document.getElementById("sliderCalibrazione").value = value; // Setto il valore sul range
     if (response.status === this.currentStatus) return; // Se è già uguale esco
     this.currentStatus = response.status || scanStatus.READY; // Aggiorno stato
     hideEveryContainer(); // Nascondo tutti i container

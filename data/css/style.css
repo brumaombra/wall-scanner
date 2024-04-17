@@ -60,13 +60,19 @@ i.link-ko {
     color: var(--bs-danger);
 }
 
+/* Slider calibrazione  */
+.sliderCalibrazioneContainer {
+    width: 500px;
+    margin: auto;
+}
+
 /* Container della matrice */
 .container-scansione {
     width: fit-content;
     margin: auto;
 }
 
-/* Tabella (materice) */
+/* Tabella (matrice) */
 #tableContainer td {
     text-align: center; 
     vertical-align: middle;

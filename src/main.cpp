@@ -423,7 +423,7 @@ void stato1() {
             LedPWM(); // Gestione LED megnetismo
             if (devMode) Serial.println(delta, 1);
             sprintf(csvString, "%.1f", delta); // Riempio la variabile del CSV con un solo valore
-            pollingSocketClient(500); // Mando dato ogni mezzo secondo
+            pollingSocketClient(200); // Mando dato
             i = 0; // Reset contatore
             delta = 0; // Reset delta
         } else {
