@@ -362,11 +362,12 @@ void setup() {
     readConfig(); // Leggo configurazione salvata
     const bool initialTest = setupLittleFS() && setupMouse() && setupServer(); // Setup funzioni critiche
     if (initialTest) { // Setup OK
-        blikingErrorSequence(true); // Se tutto ok lampeggio verde
+        blinkingLedSequence(true); // Se tutto ok lampeggio verde
         if (devMode) Serial.println("Setup OK");
         if (devMode) Serial.println("Pronto per nuova scansione, premi il pulsante per iniziare la calibrazione...");
+        turnOnOffAllLed(true); // Accendo tutti i LED
     } else { // Setup KO
-        blinkingLedSequence(true); // Se errore lampeggio rosso e lascio i LED accesi
+        blikingErrorSequence(true); // Se errore lampeggio rosso e lascio i LED accesi
         if (devMode) Serial.println("Si è verificato un errore durante il setup, esecuzione interrotta");
         while (true) delay(1000); // Fermo il programma
     }
@@ -393,7 +394,6 @@ void navToStato5() {
 // Stato iniziale
 void stato0() {
     pollingSocketClient(3000); // Mando stato ogni 3 secondi
-    if (devMode) turnOnOffAllLed(true);
     
     // Se il pulsante non è premuto non faccio niente
     if (digitalRead(BUTTON)) return;
@@ -401,7 +401,7 @@ void stato0() {
     resetVariabiliLoop(); // Preparo variabili per il prossimo stato
     XVal = 0; // Reset coordinate
     YVal = 0; // Reset coordinate
-    if (devMode) turnOnOffAllLed(false);
+    turnOnOffAllLed(false); // Spengo tutti i LED
     currentScanStatus = TUNING; // Calibrazione iniziata
     if (devMode) Serial.println("Pulsante premuto! Comincio taratura bobina...");
     delay(1000); // Delay per evitare doppia pressione tasti
