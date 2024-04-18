@@ -540,7 +540,8 @@ void stato5() {
 
     // Se il pulsante non è premuto esco
     if (digitalRead(BUTTON)) return;
-    beep(); // Bippo una volta;
+    beep(); // Bippo una volta
+    Fi0 = 29; // Reset tara
     csvString[0] = '\0'; // Svuoto CSV
     currentScanStatus = READY; // Pronto per nuova scansione
     sendSocketMessage(); // Mando il messaggio via WebSocket
