@@ -1,35 +1,65 @@
 
-# Wall-Scanner per ESP32
+# Wall-Scanner 📡
 
-Software per ESP32 capace di analizzare muri e superfici per individuare e mostrare la presenza di elementi metallici.
+Dispositivo basato sul microcontrollore `ESP32` in grado di analizzare muri e superfici per individuare e visualizzare la presenza di elementi metallici.
 
-## Istruzioni per l'Installazione
+# Il Progetto 🛠️
+
+Questo progetto presenta lo sviluppo di un **dispositivo innovativo per la rilevazione di strutture metalliche all'interno di murature edili**. Il dispositivo permette di scansionare l'area di interesse e di ottenere un'**immagine elettromagnetica** della parete, evidenziando la presenza e la posizione di eventuali **elementi metallici**.
+
+Il prototipo è stato progettato e realizzato interamente, ed è in grado di collegarsi tramite **Wi-Fi** a dispositivi esterni come **smartphone** o **PC portatili**. Mentre il dispositivo viene spostato sull'area di interesse, viene creata un'immagine della scansione in tempo reale. Il dispositivo è **portatile** e **leggero**, alimentato da un **pacco batteria interno**, e non necessita di fili esterni. Ha un'**interfaccia molto semplice** ed intuitiva da utilizzare, anche per personale non tecnico, ed è compatibile con qualsiasi dispositivo capace di visualizzare una pagina web.
+
+Il dispositivo è pensato per tracciare **tubature idrauliche in ferro**, **tubature in rame** per liquidi refrigeranti, **tondini per cemento armato** e **altre strutture metalliche** di modeste dimensioni. È in grado di discriminare tra metalli **ferromagnetici** e **non ferromagnetici**, utilizzando colori diversi per una visualizzazione più intuitiva.
+
+Questo lo rende estremamente utile per tracciare la presenza di **tubature** per installare **chiodi**, **perni di sostegno**, **strutture portanti** e **appendini**, sia per un utilizzo personale che per una clientela privata. Può anche essere utilizzato da professionisti per rilevare installazioni non documentate, ottenere una chiara idea della tratta di vecchie **tubature di riscaldamento** in rame, o pianificare nuove linee elettriche in **ristrutturazioni**.
+
+Durante lo sviluppo del progetto, i progressi e i successi sono stati documentati e sono riassunti in questo repository.
+
+Ecco qualche foto del progetto:
+
+## Interfaccia Web
+
+![The weather station prototype](./docs/web-page-1.png)
+
+![The weather station prototype](./docs/web-page-2.png)
+
+![The weather station prototype](./docs/screen-record.gif)
+
+## Il Wall-Scanner
+
+![The weather station prototype](./docs/wall-scanner-product.jpg)
+
+![The weather station prototype](./docs/wall-scanner-evolution.png)
+
+![The weather station prototype](./docs/scansione.gif)
+
+# Istruzioni per l'Installazione 📋
+
 Per configurare il Wall-Scanner puoi seguire questi passaggi:
 1. Collega tutto l'hardware necessario all'ESP32.
 2. Scarica il codice sorgente dal repository.
-3. Verifica che il pinout dell'ESP sia corretto; se necessario, modifica i valori dei pin per adattarli alla tua configurazione.
+3. Verifica che il pinout dell'ESP sia corretto. Se necessario, modifica i valori dei pin per adattarli alla tua configurazione.
 4. Collega l'ESP al PC tramite USB.
 5. Utilizza PlatformIO per scrivere la cartella `data` sulla memoria flash dell'ESP (`Build Filesystem Image`, poi `Upload Filesystem Image`).
 6. Utilizza PlatformIO per caricare il codice sorgente sull'ESP.
 7. Goditi il Wall-Scanner! ❤️
 
-## Funzioni principali
+# Tecnologie 💡
 
-- `startTimer()`: Avvia un timer quando si rileva un evento di inizio (RISING edge) sul pin specificato. Inizializza il contatore `timerCounter` se il timer non è attivo.
-- `stopTimer()`: Ferma il timer su un evento di fine (FALLING edge). Calcola la differenza di tempo dall'avvio del timer e segnala che il timer non è più in esecuzione.
-- `attachAllInterrupts()`: Abilita gli interrupt sui pin specificati per iniziare la misurazione del tempo tramite gli eventi RISING e FALLING.
-- `detachAllInterrupts()`: Disabilita gli interrupt sui pin specificati, interrompendo la misurazione del tempo.
-- `LedPWM()`: Gestisce la modulazione di larghezza di impulso (PWM) per i LED basandosi sul valore di `delta` e una soglia prefissata (`soglia`), per indicazioni visive.
-- `stampaNormale(int X, int Y, float mag)`: Stampa su seriale le coordinate (X, Y) e il valore di magnitudo `mag` con precisione a una cifra decimale.
-- `writeCsv(int X, int Y, float mag)`: Compone una stringa in formato CSV con i valori di X, Y e la magnitudo `mag`, aggiungendola a `csvString`.
-- `LEDUpDown(float Ycm, int Yprec)`: Gestisce l'accensione dei LED in base alla posizione Y per indicare la direzione della scansione.
-- `setupLittleFS()`: Inizializza il filesystem LittleFS per la gestione di file e risorse della pagina web.
-- `setupServer()`: Configura e avvia un server web asincrono per servire pagine web e gestire le richieste HTTP relative alla scansione e alle impostazioni.
-- `setupPin()`: Configura i pin di input/output per LED, pulsanti e altri componenti del progetto.
-- `setupMouse()`: Inizializza un mouse PS2 per il rilevamento dei movimenti durante la scansione.
-- `setup()`: Funzione di inizializzazione eseguita all'avvio, per configurare seriale, filesystem, server web, pin e mouse.
-- `loop()`: Funzione principale che gestisce il flusso di esecuzione del programma, incluse le interazioni utente, la misurazione, il movimento e la generazione dei dati di scansione.
+Ecco una lista delle tecnologie utilizzate in questo progetto:
 
-## Licenza
+## Frontend
+- `HTML`, `CSS` and `JavaScript` (Logica e UI pagina web)
+- `Bootstrap` (Stile)
+- `WebSocket` (Comunicazione ESP/Pagina web)
 
-Questo progetto è distribuito con Licenza MIT.
+## Dispositivo
+- `ESP32` (Microcontrollore)
+- `Bobina` (Per lettura campo magnetico)
+- `LED vari` (Per indicazione stato e coordinate)
+
+# Licenza 📜
+
+Questo progetto è distribuito sotto Licenza MIT
+
+*Copyright (c) 2024 Mauro Brambilla & Matteo Brambilla*
