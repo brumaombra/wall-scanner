@@ -13,44 +13,44 @@
 #define REDLED 23
 #define GREENLED 22
 #define LOWBATLED 2
-#define upperLED 4 // 17 se voglio che quando devo andare in alto si accenda il LED in basso
+#define upperLED 4 // 17 if I want the lower LED to light up when I need to go up
 #define centralLED 16
-#define lowerLED 17 // 4 se voglio che quando devo andare in basso si accenda il LED in alto
+#define lowerLED 17 // 4 if I want the upper LED to light up when I need to go down
 #define BUTTON 15
 #define REDCH 0
 #define YELLCH 1
 #define BEEPER 12
 #define BEEPCH 2
 
-// Variabili globali
-PS2MouseHandler mouse(MOUSE_CLOCK, MOUSE_DATA, PS2_MOUSE_REMOTE); // Istanza mouse
-unsigned int stato = 0; // Stato switch
-enum scanStatus { READY = 0, TUNING = 1, SCANNING = 2, ENDED = 3 }; // Stati della scansione
-scanStatus currentScanStatus = READY; // Stato della scansione
+// Global variables
+PS2MouseHandler mouse(MOUSE_CLOCK, MOUSE_DATA, PS2_MOUSE_REMOTE); // Mouse instance
+unsigned int stato = 0; // Switch state
+enum scanStatus { READY = 0, TUNING = 1, SCANNING = 2, ENDED = 3 }; // Scan states
+scanStatus currentScanStatus = READY; // Scan state
 unsigned long timerCounter = 0;
 float delta = 0;
 float Fi0 = 29;
 int elapsedTime = 0;
-unsigned int i = 0; // Per fare la media
-const float soglia = 0.5; // Soglia per sensibilità LED
+unsigned int i = 0; // For averaging
+const float soglia = 0.5; // Threshold for LED sensitivity
 unsigned long prevMillis = millis();
 int XVal = 0, YVal = 0;
 int Xprec = 0, Yprec = 0;
 float Xcm = 0, Ycm = 0;
-byte NCM = 3; // Numero di cm ogni quanto fare una misura
-bool normalizeValues = false; // Per capire se normalizzare i valori
-bool displayValuesOnMap = false; // Se visualizzare i valori sulla heatmap
-bool OKXY = true; // Per capire se ho già misurato in un certo 
-bool TXval, RXval, LastTX, LastRX; // Valori PIN
-const char accessPointSSID[] = "Wall-scanner"; // SSID access point
-char csvString[10000] = ""; // Stringa per salvare i dati registrati
-AsyncWebServer server(80); // Server web
+byte NCM = 3; // Number of cm every how many measurements
+bool normalizeValues = false; // To understand if normalize values
+bool displayValuesOnMap = false; // If display values on heatmap
+bool OKXY = true; // To understand if I have already measured in a certain
+bool TXval, RXval, LastTX, LastRX; // PIN values
+const char accessPointSSID[] = "Wall-scanner"; // Access point SSID
+char csvString[10000] = ""; // String to save recorded data
+AsyncWebServer server(80); // Web server
 AsyncWebSocket ws("/ws"); // WebSocket
-int connectedClients = 0; // Numero di client connessi
-Preferences preferences; // Preferenze (Per savare la configurazione)
-bool devMode = true; // Modalità sviluppo
+int connectedClients = 0; // Number of connected clients
+Preferences preferences; // Preferences (To save the configuration)
+bool devMode = true; // Development mode
 
-// PWM per i LED
+// PWM for LEDs
 void LedPWM() {
     if (delta > Fi0 + soglia) {
         ledcWrite(REDCH, 10 * (delta - (Fi0 + soglia)));
@@ -66,32 +66,32 @@ void LedPWM() {
     }
 }
 
-// Aggiungo il valore di riferimento al CSV
+// Add reference value to CSV
 void addReferenceValueToCsv() {
     sprintf(csvString, "%.1f;", Fi0);
 }
 
-// Creo la string CSV
+// Create CSV string
 void writeCsv(int X, int Y, float mag) {
     char tempBuffer[30];
     sprintf(tempBuffer, "%d,%d,%.1f;", X, Y, mag);
     strcat(csvString, tempBuffer);
-    if (devMode) Serial.println(tempBuffer); // Stampo misura corrente
+    if (devMode) Serial.println(tempBuffer); // Print current measurement
 }
 
-// Gestisco LED per direzione scansione
+// Manage LEDs for scan direction
 void LEDUpDown(float Ycm, int Yprec) {
-    if (Ycm - int((Ycm / NCM) * NCM > float(NCM) / 3) && (Ycm - int(Ycm / NCM) * NCM < float(NCM) * 2 / 3)) { // Accendo il LED centrale
+    if (Ycm - int((Ycm / NCM) * NCM > float(NCM) / 3) && (Ycm - int(Ycm / NCM) * NCM < float(NCM) * 2 / 3)) { // Turn on central LED
         digitalWrite(centralLED, HIGH);
         digitalWrite(upperLED, LOW);
         digitalWrite(lowerLED, LOW);
     }
-    if (Ycm - int(Ycm / NCM) * NCM > float(NCM) * 2 / 3) { // Accendo il LED in basso
+    if (Ycm - int(Ycm / NCM) * NCM > float(NCM) * 2 / 3) { // Turn on lower LED
         digitalWrite(centralLED, LOW);
         digitalWrite(upperLED, LOW);
         digitalWrite(lowerLED, HIGH);
     }
-    if (Ycm - int(Ycm / NCM) * NCM < float(NCM) / 3) { // Accendo il LED in alto
+    if (Ycm - int(Ycm / NCM) * NCM < float(NCM) / 3) { // Turn on upper LED
         digitalWrite(centralLED, LOW);
         digitalWrite(upperLED, HIGH);
         digitalWrite(lowerLED, LOW);
@@ -101,82 +101,82 @@ void LEDUpDown(float Ycm, int Yprec) {
 // Setup LittleFS
 bool setupLittleFS() {
 	if (!LittleFS.begin()) { // Check if LittleFS is mounted
-		if (devMode) Serial.println("Errore durante la configurazione di LittleFS");
+		if (devMode) Serial.println("Error during LittleFS configuration");
 		return false;
 	} else {
 		return true;
 	}
 }
 
-// Leggo la configurazione salvata
+// Read saved configuration
 bool readConfig() {
     preferences.begin("config", false);
-    NCM = preferences.getInt("resolution", NCM); // Risoluzione scansione
-    normalizeValues = preferences.getBool("normalize", normalizeValues); // Se visualizzare i valori
-    displayValuesOnMap = preferences.getBool("displayValues", displayValuesOnMap); // Se visualizzare i valori sulla heatmap
+    NCM = preferences.getInt("resolution", NCM); // Scan resolution
+    normalizeValues = preferences.getBool("normalize", normalizeValues); // If display values
+    displayValuesOnMap = preferences.getBool("displayValues", displayValuesOnMap); // If display values on heatmap
     preferences.end();
-    if (devMode) Serial.println("Configurazione caricata correttamente");
-    return true; // Tutto OK
+    if (devMode) Serial.println("Configuration loaded correctly");
+    return true; // All OK
 }
 
-// Salvo la configurazione
+// Save configuration
 bool writeConfig() {
     preferences.begin("config", false);
-    preferences.putInt("resolution", NCM); // Risoluzione scansione
-    preferences.putBool("normalize", normalizeValues); // Se visualizzare i valori
-    preferences.putBool("displayValues", displayValuesOnMap); // Se visualizzare i valori sulla heatmap
+    preferences.putInt("resolution", NCM); // Scan resolution
+    preferences.putBool("normalize", normalizeValues); // If display values
+    preferences.putBool("displayValues", displayValuesOnMap); // If display values on heatmap
     preferences.end();
-    if (devMode) Serial.println("Configurazione salvata correttamente");
-    return true; // Tutto OK
+    if (devMode) Serial.println("Configuration saved correctly");
+    return true; // All OK
 }
 
-// Mando il messaggio via WebSocket
+// Send message via WebSocket
 void sendSocketMessage() {
-    if (connectedClients <= 0) return; // Se non ci sono client connessi, non faccio nulla
-    if (devMode) Serial.println("Invio messaggio via WebSocket");
+    if (connectedClients <= 0) return; // If no clients connected, do nothing
+    if (devMode) Serial.println("Send message via WebSocket");
     JsonDocument doc;
-    doc["status"] = currentScanStatus; // Stato lettura
-    doc["data"] = csvString; // Stringa CSV completa
-    size_t jsonLength = measureJson(doc) + 1; // Grandezza del documento JSON
+    doc["status"] = currentScanStatus; // Reading state
+    doc["data"] = csvString; // Complete CSV string
+    size_t jsonLength = measureJson(doc) + 1; // Size of JSON document
     char json[jsonLength];
     serializeJson(doc, json, sizeof(json));
-    ws.textAll(json); // Invio il messaggio
+    ws.textAll(json); // Send the message
 }
 
-// Mando il messaggio tramite WebSocket al front-end con polling
+// Send message via WebSocket to front-end with polling
 void pollingSocketClient(const int frequence) {
-    if (millis() - prevMillis < frequence) return; // Solo ogni tot tempo, se no esco
-    prevMillis = millis(); // Aggiorno prevMillis
-    sendSocketMessage(); // Mando il messaggio via WebSocket
+    if (millis() - prevMillis < frequence) return; // Only every tot time, otherwise exit
+    prevMillis = millis(); // Update prevMillis
+    sendSocketMessage(); // Send message via WebSocket
 }
 
-// Gestisco la risposta del Websocket
+// Handle WebSocket response
 void processSocketMessage(const char* message, size_t length) {
-    // Leggo il messaggio
+    // Read the message
 }
 
-// Evento per Websocket
+// WebSocket event
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
     switch (type) {
-        case WS_EVT_CONNECT: // Evento di connessione
-            connectedClients++; // Incrementa il numero di client connessi
+        case WS_EVT_CONNECT: // Connection event
+            connectedClients++; // Increment number of connected clients
             if (devMode) Serial.println("WebSocket connected");
             break;
-        case WS_EVT_DISCONNECT: // Evento di disconnessione
-            connectedClients--; // Decrementa il numero di client connessi
+        case WS_EVT_DISCONNECT: // Disconnection event
+            connectedClients--; // Decrement number of connected clients
             if (devMode) Serial.println("WebSocket disconnected");
             break;
         case WS_EVT_DATA:
             AwsFrameInfo *info = (AwsFrameInfo*)arg;
             if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
-                data[len] = 0; // Aggiungo il carattere di fine stringa
-                processSocketMessage((const char*)data, len); // Gestisco la risposta del Websocket
+                data[len] = 0; // Add end of string character
+                processSocketMessage((const char*)data, len); // Handle WebSocket response
             }
             break;
     }
 }
 
-// Faccio partire il server web
+// Start the web server
 bool setupServer() {
     server.serveStatic("/home", LittleFS, "/").setDefaultFile("index.html"); // Serve web page
     server.serveStatic("/js", LittleFS, "/js"); // Serve web page
@@ -186,47 +186,47 @@ bool setupServer() {
 		request->send(404); // Page not found
 	});
 
-    // Prendo le impostazioni
+    // Get settings
 	server.on("/getSettings", HTTP_GET, [](AsyncWebServerRequest *request) {
         JsonDocument doc;
-        doc["resolution"] = NCM; // Risoluzione scansione
-        doc["normalize"] = normalizeValues; // Se visualizzare i valori
-        doc["displayValues"] = displayValuesOnMap; // Se visualizzare i valori sulla heatmap
-        size_t jsonLength = measureJson(doc) + 1; // Grandezza del documento JSON
+        doc["resolution"] = NCM; // Scan resolution
+        doc["normalize"] = normalizeValues; // If display values
+        doc["displayValues"] = displayValuesOnMap; // If display values on heatmap
+        size_t jsonLength = measureJson(doc) + 1; // Size of JSON document
 		char json[jsonLength];
 		serializeJson(doc, json, sizeof(json));
-		request->send(200, "application/json", json); // Mando risposta
+		request->send(200, "application/json", json); // Send response
     });
 
-    // Salvo le impostazioni
+    // Save settings
 	server.on("/setSettings", HTTP_GET, [](AsyncWebServerRequest *request) {
         String resolution = request->getParam("resolution")->value();
-        NCM = resolution.toInt(); // Sovrascrivo risoluzione
+        NCM = resolution.toInt(); // Overwrite resolution
         normalizeValues = request->getParam("normalize")->value() == "true";
         displayValuesOnMap = request->getParam("displayValues")->value() == "true";
-        writeConfig(); // Salvo la configurazione
+        writeConfig(); // Save configuration
         JsonDocument doc;
-        doc["resolution"] = NCM; // Mando la variabile aggiornata al front-end
-        doc["normalize"] = normalizeValues; // Mando la variabile aggiornata al front-end
-        doc["displayValues"] = displayValuesOnMap; // Mando la variabile aggiornata al front-end
-        size_t jsonLength = measureJson(doc) + 1; // Grandezza del documento JSON
+        doc["resolution"] = NCM; // Send updated variable to front-end
+        doc["normalize"] = normalizeValues; // Send updated variable to front-end
+        doc["displayValues"] = displayValuesOnMap; // Send updated variable to front-end
+        size_t jsonLength = measureJson(doc) + 1; // Size of JSON document
 		char json[jsonLength];
 		serializeJson(doc, json, sizeof(json));
-        request->send(200, "application/json", json); // Mando risposta
+        request->send(200, "application/json", json); // Send response
     });
 
-    // Aggiungo evento per Websocket
+    // Add WebSocket event
     ws.onEvent(onWsEvent);
     server.addHandler(&ws);
 
-    // Avvio access point e server
-    if (!WiFi.softAP(accessPointSSID)) // Configuro l'ESP come access point
-        return false; // Errore
-    server.begin(); // Avvio il server web
-    return true; // Tutto OK
+    // Start access point and server
+    if (!WiFi.softAP(accessPointSSID)) // Configure ESP as access point
+        return false; // Error
+    server.begin(); // Start web server
+    return true; // All OK
 }
 
-// Set dei pin
+// Set pins
 void setupPin() {
     pinMode(BUTTON, INPUT_PULLUP);
     pinMode(TXPIN, INPUT);
@@ -241,250 +241,250 @@ void setupPin() {
     ledcAttachPin(REDLED, REDCH);
     ledcSetup(YELLCH, 1000, 8);
     ledcAttachPin(GREENLED, YELLCH);
-    ledcSetup(BEEPCH, 2000, 4); // 4 bit di risoluzione, da 0 a 15
+    ledcSetup(BEEPCH, 2000, 4); // 4 bit resolution, from 0 to 15
     ledcAttachPin(BEEPER, BEEPCH);
 }
 
 // Setup mouse
 bool setupMouse() {
-    if (mouse.initialise() != 0) { // Errore mouse
-        if (devMode) Serial.println("Errore mouse");
+    if (mouse.initialise() != 0) { // Mouse error
+        if (devMode) Serial.println("Mouse error");
         return false;
     } else {
         return true;
     }
 }
 
-// Accendo/spengo tutti i LED
+// Turn on/off all LEDs
 void turnOnOffAllLed(const bool on) {
-    ledcWrite(REDCH, on ? 255 : 0); // LED rosso
-    ledcWrite(YELLCH, on ? 255 : 0); // LED blu
-    digitalWrite(LOWBATLED, on ? HIGH : LOW); // LED Low Battery
-    digitalWrite(upperLED, on ? HIGH : LOW); // LED sopra
-    digitalWrite(lowerLED, on ? HIGH : LOW); // LED sotto
-    digitalWrite(centralLED, on ? HIGH : LOW); // LED centrale
+    ledcWrite(REDCH, on ? 255 : 0); // Red LED
+    ledcWrite(YELLCH, on ? 255 : 0); // Blue LED
+    digitalWrite(LOWBATLED, on ? HIGH : LOW); // Low Battery LED
+    digitalWrite(upperLED, on ? HIGH : LOW); // Upper LED
+    digitalWrite(lowerLED, on ? HIGH : LOW); // Lower LED
+    digitalWrite(centralLED, on ? HIGH : LOW); // Central LED
 }
 
-// Faccio un test di tutti i LED
+// Test all LEDs
 void testAllLedSequence() {
-    const int singleLedDelay = 200; // Delay tra accensione singoli LED
-    const int allLedDelay = 1000; // Delay tra accesione tutti i LED
-    turnOnOffAllLed(false); // Spengo tutti i LED
-    ledcWrite(REDCH, 255); // Accendo LED rosso
+    const int singleLedDelay = 200; // Delay between single LED on
+    const int allLedDelay = 1000; // Delay between all LEDs on
+    turnOnOffAllLed(false); // Turn off all LEDs
+    ledcWrite(REDCH, 255); // Turn on red LED
     delay(singleLedDelay);
-    ledcWrite(REDCH, 0); // Spengo LED rosso
-    ledcWrite(YELLCH, 255); // Accendo LED blu
+    ledcWrite(REDCH, 0); // Turn off red LED
+    ledcWrite(YELLCH, 255); // Turn on blue LED
     delay(singleLedDelay);
-    ledcWrite(YELLCH, 0); // Spengo LED blu
-    digitalWrite(LOWBATLED, HIGH); // Accendo LED LOWBAT
+    ledcWrite(YELLCH, 0); // Turn off blue LED
+    digitalWrite(LOWBATLED, HIGH); // Turn on LOWBAT LED
     delay(singleLedDelay);
-    digitalWrite(LOWBATLED, LOW); // Spengo LED LOWBAT
+    digitalWrite(LOWBATLED, LOW); // Turn off LOWBAT LED
     delay(singleLedDelay);
-    digitalWrite(upperLED, HIGH); // Accendo LED sopra
+    digitalWrite(upperLED, HIGH); // Turn on upper LED
     delay(singleLedDelay);
-    digitalWrite(upperLED, LOW); // Spengo LED sopra
-    digitalWrite(centralLED, HIGH); // Accendo LED sotto
+    digitalWrite(upperLED, LOW); // Turn off upper LED
+    digitalWrite(centralLED, HIGH); // Turn on lower LED
     delay(singleLedDelay);
-    digitalWrite(centralLED, LOW); // Spengo LED sotto
-    digitalWrite(lowerLED, HIGH); // Accendo LED centrale
+    digitalWrite(centralLED, LOW); // Turn off lower LED
+    digitalWrite(lowerLED, HIGH); // Turn on central LED
     delay(singleLedDelay);
-    digitalWrite(lowerLED, LOW); // Spengo LED centrale
+    digitalWrite(lowerLED, LOW); // Turn off central LED
     delay(singleLedDelay);
-    turnOnOffAllLed(true); // Accendo tutti i LED
+    turnOnOffAllLed(true); // Turn on all LEDs
     delay(singleLedDelay);
-    turnOnOffAllLed(false); // Spengo tutti i LED
+    turnOnOffAllLed(false); // Turn off all LEDs
 }
 
-// Sequenza beeper iniziale
+// Initial beeper sequence
 void testBeeper() {
-    const int beepDelay = 50; // Delay tra accensione e spegnimento beeper
+    const int beepDelay = 50; // Delay between beeper on and off
     int j, freq = 500;
     for(j = 1; j < 6; j++) {
-        ledcSetup(BEEPCH, freq * j, 4); // 4 bit di risoluzione, da 0 a 15
+        ledcSetup(BEEPCH, freq * j, 4); // 4 bit resolution, from 0 to 15
         ledcAttachPin(BEEPER, BEEPCH);
-        ledcWrite(BEEPCH, 7); // Accendo beeper
+        ledcWrite(BEEPCH, 7); // Turn on beeper
         delay(beepDelay);
-        ledcWrite(BEEPCH, 0); // Spengo beeper
+        ledcWrite(BEEPCH, 0); // Turn off beeper
         delay(beepDelay);
     }
 
     delay(6 * beepDelay);
-    ledcWrite(BEEPCH, 7); // Accendo beeper
+    ledcWrite(BEEPCH, 7); // Turn on beeper
     delay(6 * beepDelay);
-    ledcWrite(BEEPCH, 0); // Spengo beeper
+    ledcWrite(BEEPCH, 0); // Turn off beeper
     delay(beepDelay);
 }
 
-// Singolo beep
+// Single beep
 void beep() {
-    const int beepDelay = 50; // Delay tra accensione e spegnimento beeper
+    const int beepDelay = 50; // Delay between beeper on and off
     int freq = 3000;
-    ledcSetup(BEEPCH, freq, 4); // 4 bit di risoluzione, da 0 a 15
+    ledcSetup(BEEPCH, freq, 4); // 4 bit resolution, from 0 to 15
     ledcAttachPin(BEEPER, BEEPCH);
-    ledcWrite(BEEPCH, 7); // Accendo beeper
+    ledcWrite(BEEPCH, 7); // Turn on beeper
     delay(beepDelay);
-    ledcWrite(BEEPCH, 0); // Spengo beeper
+    ledcWrite(BEEPCH, 0); // Turn off beeper
     delay(beepDelay);
 }
 
-// Lampeggio di successo LED verde (Delay totale 1200ms)
+// Success blinking green LED (Total delay 1200ms)
 void blinkingLedSequence(const bool success) {
-    turnOnOffAllLed(false); // Spengo tutti i LED
+    turnOnOffAllLed(false); // Turn off all LEDs
     for (int counter = 0; counter < 3; counter++) {
-        digitalWrite(success ? centralLED : upperLED, LOW); // Spengo LED
+        digitalWrite(success ? centralLED : upperLED, LOW); // Turn off LED
         delay(200);
-        digitalWrite(success ? centralLED : upperLED, HIGH); // Accendo LED
+        digitalWrite(success ? centralLED : upperLED, HIGH); // Turn on LED
         delay(200);
     }
-    digitalWrite(success ? centralLED : upperLED, LOW); // Spengo LED
+    digitalWrite(success ? centralLED : upperLED, LOW); // Turn off LED
 }
 
-// Lampeggio di due LED rossi (Delay totale 1200ms)
+// Blinking two red LEDs (Total delay 1200ms)
 void blikingErrorSequence(const bool keepOn) {
-    turnOnOffAllLed(false); // Spengo tutti i LED
+    turnOnOffAllLed(false); // Turn off all LEDs
     for (int counter = 0; counter < 3; counter++) {
-        digitalWrite(upperLED, LOW); // Spengo LED
-        digitalWrite(lowerLED, LOW); // Spengo LED
+        digitalWrite(upperLED, LOW); // Turn off LED
+        digitalWrite(lowerLED, LOW); // Turn off LED
         delay(200);
-        digitalWrite(upperLED, HIGH); // Accendo LED
-        digitalWrite(lowerLED, HIGH); // Accendo LED
+        digitalWrite(upperLED, HIGH); // Turn on LED
+        digitalWrite(lowerLED, HIGH); // Turn on LED
         delay(200);
     }
-    if (!keepOn) turnOnOffAllLed(false); // Spengo i LED se necessario
+    if (!keepOn) turnOnOffAllLed(false); // Turn off LEDs if necessary
 }
 
 // Setup
 void setup() {
-    if (devMode) Serial.begin(115200); // Inizializzo la seriale
-    setupPin(); // Setup dei pin
-    testAllLedSequence(); // Test di tutti i LED
-    testBeeper(); // Test del beeper
-    readConfig(); // Leggo configurazione salvata
-    const bool initialTest = setupLittleFS() && setupMouse() && setupServer(); // Setup funzioni critiche
+    if (devMode) Serial.begin(115200); // Initialize serial
+    setupPin(); // Setup pins
+    testAllLedSequence(); // Test all LEDs
+    testBeeper(); // Test beeper
+    readConfig(); // Read saved configuration
+    const bool initialTest = setupLittleFS() && setupMouse() && setupServer(); // Setup critical functions
     if (initialTest) { // Setup OK
-        blinkingLedSequence(true); // Se tutto ok lampeggio verde
+        blinkingLedSequence(true); // If all ok blink green
         if (devMode) Serial.println("Setup OK");
-        if (devMode) Serial.println("Pronto per nuova scansione, premi il pulsante per iniziare la calibrazione...");
-        turnOnOffAllLed(true); // Accendo tutti i LED
+        if (devMode) Serial.println("Ready for new scan, press the button to start calibration...");
+        turnOnOffAllLed(true); // Turn on all LEDs
     } else { // Setup KO
-        blikingErrorSequence(true); // Se errore lampeggio rosso e lascio i LED accesi
-        if (devMode) Serial.println("Si è verificato un errore durante il setup, esecuzione interrotta");
-        while (true) delay(1000); // Fermo il programma
+        blikingErrorSequence(true); // If error blink red and leave LEDs on
+        if (devMode) Serial.println("An error occurred during setup, execution stopped");
+        while (true) delay(1000); // Stop the program
     }
 }
 
-// Resetto le variabili usate nel loop
+// Reset variables used in loop
 void resetVariabiliLoop() {
-    LastTX = digitalRead(TXPIN); // Leggo valore TX
-    LastRX = digitalRead(RXPIN); // Leggo valore RX
-    i = timerCounter = 0; // Reset variabili
+    LastTX = digitalRead(TXPIN); // Read TX value
+    LastRX = digitalRead(RXPIN); // Read RX value
+    i = timerCounter = 0; // Reset variables
     prevMillis = millis(); // Reset millis
 }
 
-// Passo allo stato 5
+// Go to state 5
 void navToStato5() {
-    resetVariabiliLoop(); // Preparo variabili per il prossimo stato
-    currentScanStatus = ENDED; // Scansione terminata
-    sendSocketMessage(); // Mando il messaggio via WebSocket
-    if (devMode) Serial.println("Scansione terminata!");
-    blinkingLedSequence(true); // Lampeggio LED verde + delay per evitare doppia pressione tasti
-    stato = 5; // Passo allo stato finale
+    resetVariabiliLoop(); // Prepare variables for next state
+    currentScanStatus = ENDED; // Scan ended
+    sendSocketMessage(); // Send message via WebSocket
+    if (devMode) Serial.println("Scan finished!");
+    blinkingLedSequence(true); // Blink green LED + delay to avoid double button press
+    stato = 5; // Go to final state
 }
 
-// Stato iniziale
+// Initial state
 void stato0() {
-    pollingSocketClient(3000); // Mando stato ogni 3 secondi
+    pollingSocketClient(3000); // Send status every 3 seconds
     
-    // Se il pulsante non è premuto non faccio niente
+    // If button not pressed do nothing
     if (digitalRead(BUTTON)) return;
-    beep(); // Bippo una volta
-    resetVariabiliLoop(); // Preparo variabili per il prossimo stato
-    XVal = 0; // Reset coordinate
-    YVal = 0; // Reset coordinate
-    turnOnOffAllLed(false); // Spengo tutti i LED
-    currentScanStatus = TUNING; // Calibrazione iniziata
-    if (devMode) Serial.println("Pulsante premuto! Comincio taratura bobina...");
-    delay(1000); // Delay per evitare doppia pressione tasti
-    stato = 1; // Passo allo stato 1
+    beep(); // Beep once
+    resetVariabiliLoop(); // Prepare variables for next state
+    XVal = 0; // Reset coordinates
+    YVal = 0; // Reset coordinates
+    turnOnOffAllLed(false); // Turn off all LEDs
+    currentScanStatus = TUNING; // Calibration started
+    if (devMode) Serial.println("Button pressed! Starting coil tuning...");
+    delay(1000); // Delay to avoid double button press
+    stato = 1; // Go to state 1
 }
 
-// Taro la bobina
+// Tune the coil
 void stato1() {
-    TXval = digitalRead(TXPIN); // Leggo valore TX
-    RXval = digitalRead(RXPIN); // Leggo valore RX
-    if (!LastTX && TXval) // Fronte di salita del TX
-        timerCounter = ESP.getCycleCount(); // Faccio partire il timer
-    if (!RXval && LastRX && timerCounter != 0) { // Fronte di discesa del RX
+    TXval = digitalRead(TXPIN); // Read TX value
+    RXval = digitalRead(RXPIN); // Read RX value
+    if (!LastTX && TXval) // Rising edge of TX
+        timerCounter = ESP.getCycleCount(); // Start timer
+    if (!RXval && LastRX && timerCounter != 0) { // Falling edge of RX
         elapsedTime = ESP.getCycleCount() - timerCounter; // Stop timer
         delta = delta + elapsedTime / 240;
         timerCounter = 0; // Reset timer
         if (i > 600) {
-            delta = delta / 601; // Calcolo media
-            LedPWM(); // Gestione LED megnetismo
+            delta = delta / 601; // Calculate average
+            LedPWM(); // Manage magnetism LED
             if (devMode) Serial.println(delta, 1);
-            sprintf(csvString, "%.1f", delta); // Riempio la variabile del CSV con un solo valore
-            pollingSocketClient(200); // Mando dato
-            i = 0; // Reset contatore
+            sprintf(csvString, "%.1f", delta); // Fill CSV variable with single value
+            pollingSocketClient(200); // Send data
+            i = 0; // Reset counter
             delta = 0; // Reset delta
         } else {
-            i++; // Incremento contatore
+            i++; // Increment counter
         }
     }
 
-    LastTX = TXval; // Aggiorno valore TX
-    LastRX = RXval; // Aggiorno valore RX
+    LastTX = TXval; // Update TX value
+    LastRX = RXval; // Update RX value
 
-    if (digitalRead(BUTTON)) return; // Se il pulsante non è premuto esco
-    beep(); // Bippo una volta;
-    if (devMode) Serial.print("Valore di riferimento: ");
-    resetVariabiliLoop(); // Preparo variabili per il prossimo stato
-    delay(1000); // Delay per evitare doppia pressione tasti
-    stato = 2; // Passo al prossimo stato
+    if (digitalRead(BUTTON)) return; // If button not pressed exit
+    beep(); // Beep once;
+    if (devMode) Serial.print("Reference value: ");
+    resetVariabiliLoop(); // Prepare variables for next state
+    delay(1000); // Delay to avoid double button press
+    stato = 2; // Go to next state
 }
 
-// Taro il delay
+// Tune the delay
 void stato2() {
-    TXval = digitalRead(TXPIN); // Leggo valore TX
-    RXval = digitalRead(RXPIN); // Leggo valore RX
-    if (!LastTX && TXval) // Fronte di salita del TX
+    TXval = digitalRead(TXPIN); // Read TX value
+    RXval = digitalRead(RXPIN); // Read RX value
+    if (!LastTX && TXval) // Rising edge of TX
         timerCounter = ESP.getCycleCount();
-    if (!RXval && LastRX && timerCounter != 0) { // Fronte di discesa del RX
+    if (!RXval && LastRX && timerCounter != 0) { // Falling edge of RX
         elapsedTime = ESP.getCycleCount() - timerCounter;
         Fi0 = Fi0 + elapsedTime / 240;
         timerCounter = 0; // Reset timer
         if (i > 5000) {
             Fi0 = Fi0 / 5001;
-            if (devMode) Serial.println(Fi0, 1); // Stampo valore di riferimento
-            addReferenceValueToCsv(); // Aggiungo il valore di riferimento al CSV
-            sendSocketMessage(); // Mando il messaggio via WebSocket
-            blinkingLedSequence(true); // Lampeggio LED verde
-            delay(1800); // Delay aggiuntivo per arrivare a 3000ms
-            beep(); // Bippo una volta;
-            i = 0; // Reset contatore
-            currentScanStatus = SCANNING; // Setto stato SCANNING
-            sendSocketMessage(); // Mando il messaggio via WebSocket
-            if (devMode) Serial.println("Scansione avviata...");
-            stato = 3; // Passo al prossimo stato
+            if (devMode) Serial.println(Fi0, 1); // Print reference value
+            addReferenceValueToCsv(); // Add reference value to CSV
+            sendSocketMessage(); // Send message via WebSocket
+            blinkingLedSequence(true); // Blink green LED
+            delay(1800); // Additional delay to reach 3000ms
+            beep(); // Beep once;
+            i = 0; // Reset counter
+            currentScanStatus = SCANNING; // Set SCANNING status
+            sendSocketMessage(); // Send message via WebSocket
+            if (devMode) Serial.println("Scan started...");
+            stato = 3; // Go to next state
         } else {
-            i++; // Incremento contatore
+            i++; // Increment counter
         }
     }
 
-    LastTX = TXval; // Aggiorno valore TX
-    LastRX = RXval; // Aggiorno valore RX
+    LastTX = TXval; // Update TX value
+    LastRX = RXval; // Update RX value
 }
 
-// Controllo se mi sono mosso
+// Check if I moved
 void stato3() {
-    if (millis() - prevMillis < 200) return; // Se non sono passati 200 ms, non faccio nulla
-    prevMillis = millis(); // Aggiorno prevMillis
-    LedPWM(); // Gestione LED megnetismo
-    mouse.get_data(); // Leggo dati dal mouse
-    XVal += mouse.x_movement(); // Prendo movimento x
-    YVal += mouse.y_movement(); // Prendo movimento y
-    Xcm = XVal * 0.01151; // Converto in cm
-    Ycm = YVal * 0.01151; // Converto in cm
-    LEDUpDown(Ycm, Yprec); // Gestisco l'LED in base al movimento del mouse
+    if (millis() - prevMillis < 200) return; // If not passed 200 ms, do nothing
+    prevMillis = millis(); // Update prevMillis
+    LedPWM(); // Manage magnetism LED
+    mouse.get_data(); // Read data from mouse
+    XVal += mouse.x_movement(); // Get x movement
+    YVal += mouse.y_movement(); // Get y movement
+    Xcm = XVal * 0.01151; // Convert to cm
+    Ycm = YVal * 0.01151; // Convert to cm
+    LEDUpDown(Ycm, Yprec); // Manage LED based on mouse movement
     if (Xprec != int(Xcm) / NCM | Yprec != int(Ycm) / NCM) {
         Xprec = int(Xcm) / NCM;
         Yprec = int(Ycm) / NCM;
@@ -492,85 +492,85 @@ void stato3() {
     }
     if ((Xcm - int(Xcm / NCM) * NCM > float(NCM) / 3) && (Xcm - int(Xcm / NCM) * NCM < float(NCM) * 2 / 3) && OKXY) {
         OKXY = false;
-        stato = 4; // Passo al prossimo stato
+        stato = 4; // Go to next state
     }
 
-    // Controllo pressione del pulsante
+    // Check button press
     if (!digitalRead(BUTTON)){
-        beep(); // Bippo una volta;
-        navToStato5(); // Passo allo stato 5
+        beep(); // Beep once;
+        navToStato5(); // Go to state 5
     }
 }
 
-// Misuro magnetismo e torno a misurare
+// Measure magnetism and go back to measure
 void stato4() {
-    TXval = digitalRead(TXPIN); // Leggo valore TX
-    RXval = digitalRead(RXPIN); // Leggo valore RX
-    if (!LastTX && TXval) // Fronte di salita del TX
+    TXval = digitalRead(TXPIN); // Read TX value
+    RXval = digitalRead(RXPIN); // Read RX value
+    if (!LastTX && TXval) // Rising edge of TX
         timerCounter = ESP.getCycleCount();
-    if (!RXval && LastRX && timerCounter != 0) { // Fronte di discesa del RX
+    if (!RXval && LastRX && timerCounter != 0) { // Falling edge of RX
         elapsedTime = ESP.getCycleCount() - timerCounter;
         delta = delta + elapsedTime / 240;
         timerCounter = 0; // Reset
         if (i > 500) {
-            i = 0; // Reset contatore
+            i = 0; // Reset counter
             delta = delta / 501;
-            writeCsv(int(Xcm / NCM), int(Ycm / NCM), delta); // Aggiungo al CSV
-            sendSocketMessage(); // Mando il messaggio via WebSocket
-            LedPWM(); // Gestione LED megnetismo
-            stato = 3; // Torno allo stato 3
+            writeCsv(int(Xcm / NCM), int(Ycm / NCM), delta); // Add to CSV
+            sendSocketMessage(); // Send message via WebSocket
+            LedPWM(); // Manage magnetism LED
+            stato = 3; // Go back to state 3
         } else {
-            i++; // Incremento contatore
+            i++; // Increment counter
         }
     }
 
-    LastTX = TXval; // Aggiorno valore TX
-    LastRX = RXval; // Aggiorno valore RX
+    LastTX = TXval; // Update TX value
+    LastRX = RXval; // Update RX value
 
-    // Controllo pressione del pulsante
+    // Check button press
     if (!digitalRead(BUTTON)){
-        beep(); // Bippo una volta;
-        navToStato5(); // Passo allo stato 5
+        beep(); // Beep once;
+        navToStato5(); // Go to state 5
     }
 }
 
-// Termino scansione e mando dati completi a front-end
+// End scan and send complete data to front-end
 void stato5() {
-    pollingSocketClient(3000); // Mando heatmap completa ogni 3 secondi
+    pollingSocketClient(3000); // Send complete heatmap every 3 seconds
 
-    // Se il pulsante non è premuto esco
+    // If button not pressed exit
     if (digitalRead(BUTTON)) return;
-    beep(); // Bippo una volta
-    Fi0 = 29; // Reset tara
-    csvString[0] = '\0'; // Svuoto CSV
-    currentScanStatus = READY; // Pronto per nuova scansione
-    sendSocketMessage(); // Mando il messaggio via WebSocket
-    resetVariabiliLoop(); // Preparo variabili per il prossimo stato
-    if (devMode) Serial.println("Pronto per nuova scansione, premi il pulsante per iniziare la calibrazione");
-    delay(1000); // Delay per evitare doppia pressione tasti
-    stato = 0; // Ricomincio il ciclo
+    beep(); // Beep once
+    Fi0 = 29; // Reset tare
+    csvString[0] = '\0'; // Empty CSV
+    currentScanStatus = READY; // Ready for new scan
+    sendSocketMessage(); // Send message via WebSocket
+    resetVariabiliLoop(); // Prepare variables for next state
+    if (devMode) Serial.println("Ready for new scan, press the button to start calibration");
+    delay(1000); // Delay to avoid double button press
+    stato = 0; // Restart cycle
 }
 
 // Loop
 void loop() {
     switch (stato) {
-        case 0: // Stato iniziale
-            stato0(); // Gestione stato 0
+        case 0: // Initial state
+            stato0(); // Handle state 0
             break;
-        case 1: // Taro la bobina
-            stato1(); // Gestione stato 1
+        case 1: // Tune the coil
+            stato1(); // Handle state 1
             break;
-        case 2: // Taro il delay
-            stato2(); // Gestione stato 2
+        case 2: // Tune the delay
+            stato2(); // Handle state 2
             break;
-        case 3: // Controllo se mi sono mosso
-            stato3(); // Gestione stato 3
+        case 3: // Check if I moved
+            stato3(); // Handle state 3
             break;
-        case 4: // Misuro magnetismo e torno a misurare
-            stato4(); // Gestione stato 4
+        case 4: // Measure magnetism and go back to measure
+            stato4(); // Handle state 4
             break;
-        case 5: // Termino scansione e mando dati completi a front-end
-            stato5(); // Gestione stato 5
+        case 5: // End scan and send complete data to front-end
+            stato5(); // Handle state 5
             break;
     }
 }

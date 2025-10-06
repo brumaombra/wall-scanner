@@ -1,4 +1,4 @@
-# 📡 Wall-Scanner - Rilevatore Portatile di Metalli nelle Murature
+# 📡 Wall-Scanner - Portable Metal Detector in Walls
 
 <div align="center">
 
@@ -12,138 +12,138 @@
 
 ---
 
-## 🎯 Che Cos'è Wall-Scanner?
+## 🎯 What is Wall-Scanner?
 
-Wall-Scanner è un dispositivo portatile basato su ESP32 progettato per mappare la presenza di elementi metallici all'interno di pareti e superfici, visualizzando una heatmap in tempo reale tramite un'interfaccia web accessibile da smartphone o PC 🌐📱🔍.
+Wall-Scanner is a portable device based on ESP32 designed to map the presence of metallic elements inside walls and surfaces, displaying a real-time heatmap via a web interface accessible from smartphone or PC 🌐📱🔍.
 
-### 🌟 Punti Chiave
+### 🌟 Key Points
 
-- 🧲 **Rilevazione metalli**: Individua tubi, tondini e piccole strutture metalliche nelle pareti
-- 📡 **Connettività Wi-Fi**: Aggiornamenti in tempo reale via WebSocket per visualizzazione live della heatmap
-- 🔋 **Design portatile**: Dispositivo alimentato a batteria, leggero con interfaccia web intuitiva
-- 🎯 **Discriminazione materiali**: Differenziazione approssimativa tra metalli ferromagnetici e non ferromagnetici tramite codifica a colori
-- 📊 **Imaging elettromagnetico**: Genera mappe elettromagnetiche in tempo reale delle superfici scansionate
-- 📱 **Accesso multipiattaforma**: Compatibile con smartphone, tablet e PC
-- ⚡ **Calibrazione facile**: Configurazione e processo di scansione semplici per utenti non tecnici
+- 🧲 **Metal detection**: Identifies pipes, rebars and small metallic structures in walls
+- 📡 **Wi-Fi connectivity**: Real-time updates via WebSocket for live heatmap visualization
+- 🔋 **Portable design**: Battery-powered device, lightweight with intuitive web interface
+- 🎯 **Material discrimination**: Approximate differentiation between ferromagnetic and non-ferromagnetic metals through color coding
+- 📊 **Electromagnetic imaging**: Generates real-time electromagnetic maps of scanned surfaces
+- 📱 **Multi-platform access**: Compatible with smartphones, tablets and PCs
+- ⚡ **Easy calibration**: Simple configuration and scanning process for non-technical users
 
 ---
 
-## 📸 Interfaccia e Foto
+## 📸 Interface and Photos
 
-Screenshot e demo della web UI e del prototipo:
+Screenshots and demo of the web UI and prototype:
 
 <div align="center">
 
-### 📱 Interfaccia Web Principale
-<img src="./docs/web-page-1.png" alt="Interfaccia web" />
+### 📱 Main Web Interface
+<img src="./docs/web-app-page-1.png" alt="Web interface" />
 
-### ⚙️ Settaggi Disponibili
-<img src="./docs/screen-record.gif" alt="Settaggi disponibili" />
+### ⚙️ Available Settings
+<img src="./docs/web-app-page-settings.gif" alt="Available settings" />
 
-### 📦 Prodotto Finale
-<img src="./docs/wall-scanner-product.jpg" alt="Prodotto finale" />
+### 📦 Final Product
+<img src="./docs/wall-scanner-elements.jpg" alt="Final product" />
 
-### 🔄 Evoluzione del Prototipo
-<img src="./docs/wall-scanner-evolution.png" alt="Evoluzione prototipo" />
+### 🔄 Prototype Evolution
+<img src="./docs/wall-scanner-versions.png" alt="Prototype evolution" />
 
-### 🔍 Esempio di Scansione
-<img src="./docs/scansione.gif" alt="Esempio di scansione" />
+### 🔍 Scan Example
+<img src="./docs/scan.gif" alt="Scan example" />
 
 </div>
 
 ---
 
-## 🛠️ Il Progetto Nel Dettaglio
+## 🛠️ The Project in Detail
 
-Questo progetto presenta lo sviluppo di un **dispositivo innovativo 🆕 per la rilevazione di strutture metalliche 🧲 all'interno di murature edili**. Il dispositivo permette di scansionare l'area di interesse e di ottenere un'**immagine elettromagnetica 📊** della parete, evidenziando la presenza e la posizione di eventuali **elementi metallici 🔍**.
+This project presents the development of an **innovative device 🆕 for detecting metallic structures 🧲 inside building walls**. The device allows scanning the area of interest and obtaining an **electromagnetic image 📊** of the wall, highlighting the presence and position of any **metallic elements 🔍**.
 
-Il prototipo è stato progettato e realizzato interamente 🔧, ed è in grado di collegarsi tramite **Wi-Fi 📡** a dispositivi esterni come **smartphone 📱** o **PC portatili 💻**. Mentre il dispositivo viene spostato sull'area di interesse, viene creata un'immagine della scansione in tempo reale ⏱️. Il dispositivo è **portatile 🔋** e **leggero ⚖️**, alimentato da un **pacco batteria interno 🔋**, e non necessita di fili esterni 🔌. Ha un'**interfaccia molto semplice 😊** ed intuitiva da utilizzare, anche per personale non tecnico 👷‍♂️, ed è compatibile con qualsiasi dispositivo capace di visualizzare una pagina web 🌐.
+The prototype was designed and built entirely 🔧, and is able to connect via **Wi-Fi 📡** to external devices such as **smartphone 📱** or **laptop 💻**. While the device is moved over the area of interest, a real-time scan image is created ⏱️. The device is **portable 🔋** and **lightweight ⚖️**, powered by an **internal battery pack 🔋**, and does not require external wires 🔌. It has a **very simple 😊** and intuitive interface to use, even for non-technical personnel 👷‍♂️, and is compatible with any device capable of displaying a web page 🌐.
 
-Il dispositivo è pensato per tracciare **tubature idrauliche in ferro 🔩**, **tubature in rame 🟫** per liquidi refrigeranti, **tondini per cemento armato 🏗️** e **altre strutture metalliche** di modeste dimensioni 📏. È in grado di discriminare tra metalli **ferromagnetici 🧲** e **non ferromagnetici 🔩**, utilizzando colori diversi per una visualizzazione più intuitiva 🎨.
+The device is designed to trace **iron plumbing pipes 🔩**, **copper pipes 🟫** for refrigerants, **reinforced concrete rebars 🏗️** and **other metallic structures** of modest size 📏. It is able to discriminate between **ferromagnetic 🧲** and **non-ferromagnetic 🔩** metals, using different colors for more intuitive visualization 🎨.
 
-Questo lo rende estremamente utile per tracciare la presenza di **tubature 🔧** per installare **chiodi 📌**, **perni di sostegno 🛠️**, **strutture portanti 🏗️** e **appendini 🪝**, sia per un utilizzo personale 🏠 che per una clientela privata 🏢. Può anche essere utilizzato da professionisti 👨‍🔧 per rilevare installazioni non documentate 📋, ottenere una chiara idea della tratta di vecchie **tubature di riscaldamento** in rame 🟫, o pianificare nuove linee elettriche ⚡ in **ristrutturazioni 🏠**.
+This makes it extremely useful for tracing the presence of **pipes 🔧** to install **nails 📌**, **support pins 🛠️**, **load-bearing structures 🏗️** and **hooks 🪝**, both for personal use 🏠 and for private clientele 🏢. It can also be used by professionals 👨‍🔧 to detect undocumented installations 📋, get a clear idea of the route of old **copper heating pipes** 🟫, or plan new electrical lines ⚡ in **renovations 🏠**.
 
-Durante lo sviluppo del progetto, i progressi e i successi sono stati documentati 📝 e sono riassunti in questo repository 🗂️.
+During the project development, progress and successes were documented 📝 and are summarized in this repository 🗂️.
 
 ---
 
-## Tecnologie 💡
+## Technologies 💡
 
-### 🏗️ Architettura Del Progetto
+### 🏗️ Project Architecture
 
-Wall-Scanner è composto da due parti principali:
+Wall-Scanner consists of two main parts:
 
-- 📡 Il firmware sull'ESP32 (che gestisce bobina, letture temporali, mouse PS2 per tracking e un server web statico con WebSocket)
-- 🌐 La web‑UI (nella cartella `data`) che riceve i dati via WebSocket e mostra la heatmap in tempo reale
+- 📡 The firmware on the ESP32 (which manages coil, time readings, PS2 mouse for tracking and a static web server with WebSocket)
+- 🌐 The web‑UI (in the `data` folder) that receives data via WebSocket and shows the heatmap in real time
 
-Il dispositivo effettua una tara iniziale, acquisisce misure durante la scansione muovendosi sulla parete e invia i dati al client connesso per la visualizzazione 🔁.
+The device performs an initial tare, acquires measurements during scanning while moving on the wall and sends the data to the connected client for visualization 🔁.
 
-### 💡 Tecnologie e Librerie
+### 💡 Technologies and Libraries
 
-Ecco una lista delle tecnologie utilizzate in questo progetto:
+Here is a list of technologies used in this project:
 
 #### Frontend
 
 - 🌐 HTML/CSS/JavaScript
 - 🎨 Bootstrap (UI)
-- 🔗 WebSocket (comunicazione in tempo reale)
+- 🔗 WebSocket (real-time communication)
 
-#### Dispositivo/Firmware
+#### Device/Firmware
 
 - 📡 ESP32
-- 💾 LittleFS (Filesystem per la web UI)
-- 🖱️ PS2MouseHandler (Tracking movimento)
+- 💾 LittleFS (Filesystem for the web UI)
+- 🖱️ PS2MouseHandler (Movement tracking)
 - 🌐 ESPAsyncWebServer/AsyncWebSocket
 
 ---
 
-## 📋 Istruzioni Per l'Installazione
+## 📋 Installation Instructions
 
-### 🔧 Prerequisiti
+### 🔧 Prerequisites
 
-- 🛠️ PlatformIO (o ambiente Arduino compatibile)
+- 🛠️ PlatformIO (or compatible Arduino environment)
 - 📡 ESP32
-- 💾 Tool per caricare il filesystem (PlatformIO: Build Filesystem Image, Upload Filesystem Image)
+- 💾 Tool to upload the filesystem (PlatformIO: Build Filesystem Image, Upload Filesystem Image)
 
-### 📦 Installazione
+### 📦 Installation
 
-Per configurare il Wall-Scanner puoi seguire questi passaggi:
-1. 🔌 Collega tutto l'hardware necessario all'ESP32.
-2. 📥 Scarica il codice sorgente dal repository.
-3. ⚙️ Verifica che il pinout dell'ESP sia corretto. Se necessario, modifica i valori dei pin per adattarli alla tua configurazione.
-4. 🔗 Collega l'ESP al PC tramite USB.
-5. 💾 Utilizza PlatformIO per scrivere la cartella `data` sulla memoria flash dell'ESP (`Build Filesystem Image`, poi `Upload Filesystem Image`).
-6. 🚀 Utilizza PlatformIO per caricare il codice sorgente sull'ESP.
-7. 🎉 Goditi il Wall-Scanner! ❤️
-
----
-
-## ✅ Funzionalità principali
-
-- ⚙️ Calibrazione automatica della bobina
-- 🖱️ Acquisizione della posizione tramite mouse PS2 (tracking)
-- 📊 Generazione di una heatmap in tempo reale inviata via WebSocket
-- 💾 Salvataggio temporaneo dei dati di scansione in una stringa CSV per download/analisi
-- 🔊 Segnalazione tramite LED e beeper per stato, errori e conferme
+To set up the Wall-Scanner you can follow these steps:
+1. 🔌 Connect all necessary hardware to the ESP32.
+2. 📥 Download the source code from the repository.
+3. ⚙️ Verify that the ESP pinout is correct. If necessary, modify the pin values to adapt them to your configuration.
+4. 🔗 Connect the ESP to the PC via USB.
+5. 💾 Use PlatformIO to write the `data` folder to the ESP flash memory (`Build Filesystem Image`, then `Upload Filesystem Image`).
+6. 🚀 Use PlatformIO to upload the source code to the ESP.
+7. 🎉 Enjoy the Wall-Scanner! ❤️
 
 ---
 
-## 📋 Note Importanti
+## ✅ Main Features
 
-- ⚙️ Il dispositivo esegue una fase di taratura iniziale (Fi0) prima della scansione.
-- 🔄 Durante la scansione muovi il dispositivo su tutta l'area interessata; la risoluzione di scansione è configurabile (variabile `NCM` nelle preferenze).
-- 📁 La cartella `data` contiene la web UI: modifiche e miglioramenti alla UI possono essere fatti lì e ricaricati con l'Upload Filesystem Image.
+- ⚙️ Automatic coil calibration
+- 🖱️ Position acquisition via PS2 mouse (tracking)
+- 📊 Generation of a real-time heatmap sent via WebSocket
+- 💾 Temporary saving of scan data in a CSV string for download/analysis
+- 🔊 Signaling via LED and beeper for status, errors and confirmations
+
+---
+
+## 📋 Important Notes
+
+- ⚙️ The device performs an initial tare phase (Fi0) before scanning.
+- 🔄 During scanning, move the device over the entire area of interest; the scan resolution is configurable (variable `NCM` in preferences).
+- 📁 The `data` folder contains the web UI: modifications and improvements to the UI can be made there and reloaded with Upload Filesystem Image.
 
 ---
 
 ## 📄 License
 
-Questo progetto è distribuito sotto la **Licenza MIT** - consulta il file [LICENSE](LICENSE) per i dettagli.
+This project is distributed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🙏 Ringraziamenti
+## 🙏 Acknowledgments
 
-- 🎨 **Bootstrap** per il supporto nello styling dell'interfaccia web
-- 📊 **Librerie di visualizzazione** (per esempio charting e utilità JS) che rendono possibile la visualizzazione della heatmap e delle metriche
-- 🤖 **Autori delle librerie open-source** utilizzate nel firmware: `ESPAsyncWebServer`, `AsyncWebSocket`, `PS2MouseHandler`, `LittleFS` e altre
+- 🎨 **Bootstrap** for support in styling the web interface
+- 📊 **Visualization libraries** (for example charting and JS utilities) that make heatmap and metrics visualization possible
+- 🤖 **Authors of open-source libraries** used in the firmware: `ESPAsyncWebServer`, `AsyncWebSocket`, `PS2MouseHandler`, `LittleFS` and others

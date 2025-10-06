@@ -4,8 +4,7 @@
 #define PS2_MOUSE_REMOTE 1
 #define PS2_MOUSE_STREAM 2
 
-class PS2MouseHandler
-{
+class PS2MouseHandler {
   private:
     int _clock_pin;
     int _data_pin;

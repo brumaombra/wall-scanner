@@ -11,14 +11,14 @@ body {
 .fs-40 { font-size: 40px; }
 .fs-60 { font-size: 60px; }
 
-/* Zona messaggi */
+/* Messages area */
 .content-center,
 .content-center h2,
 .content-center p {
     text-align: center;
 }
 
-/* navbar */
+/* Navbar */
 .navbar {
     border-bottom: 2px solid #dfe4ea;
 }
@@ -33,7 +33,7 @@ body {
     padding-left: 1rem;
 }
 
-/* Pulsanti */
+/* Buttons */
 .btn {
     font-weight: 700;
     padding: 8px 15px;
@@ -46,7 +46,7 @@ body {
     font-weight: 700;
 }
 
-/* Contenitore icone connessione */
+/* Connection icons container */
 .link-icon-container {
     margin-right: 24px;
 }
@@ -60,19 +60,19 @@ i.link-ko {
     color: var(--bs-danger);
 }
 
-/* Slider calibrazione  */
+/* Calibration slider */
 .sliderCalibrazioneContainer {
     width: 500px;
     margin: auto;
 }
 
-/* Container della matrice */
+/* Matrix container */
 .container-scansione {
     width: fit-content;
     margin: auto;
 }
 
-/* Tabella (matrice) */
+/* Table (matrix) */
 #tableContainer td {
     text-align: center; 
     vertical-align: middle;
@@ -93,7 +93,7 @@ i.link-ko {
     --bs-backdrop-opacity: 0.35;
 }
 
-/* Zona messaggi */
+/* Messages area */
 .messagges-container {
     margin-bottom: 1rem;
 }

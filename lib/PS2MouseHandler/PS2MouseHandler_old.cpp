@@ -1,5 +1,4 @@
 #include <Arduino.h>
-
 #include "HardwareSerial.h"
 #include "PS2MouseHandler.h"
 

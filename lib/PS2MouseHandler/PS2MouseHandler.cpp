@@ -13,7 +13,7 @@ PS2MouseHandler::PS2MouseHandler(int clock_pin, int data_pin, int mode) {
     _enabled = false;
     _device_id = 0x00;
     _no_mouse = false;
-    _last_status = 0; // Will hold copy of status byte
+    _last_status = 0; // Will hold copy of status
 }
 
 int PS2MouseHandler::clock_pin() {

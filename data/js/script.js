@@ -1,219 +1,219 @@
-// Parametri globali
+// Global parameters
 const tableCellWidth = "30px";
 const tableCellHeight = "30px";
 const tableCellBorder = "1px solid #34495e";
 const ESP32IP = ""; // "http://localhost:3000"
-const scanStatus = { READY: 0, TUNING: 1, SCANNING: 2, ENDED: 3 }; // Stato della scansione
-let currentStatus = scanStatus.READY; // Stato attuale della scansione
-const taraBobina = 29; // Valore tara bobina
+const scanStatus = { READY: 0, TUNING: 1, SCANNING: 2, ENDED: 3 }; // Scan status
+let currentStatus = scanStatus.READY; // Current scan status
+const taraBobina = 29; // Coil tare value
 
-// Documento pronto
+// Document ready
 $(document).ready(() => {
-    $("#linkIconOk").animate({ opacity: 0 }, 0); // Nascondo icona link OK
-    init(); // Funzione init
+    $("#linkIconOk").animate({ opacity: 0 }, 0); // Hide link OK icon
+    init(); // Init function
 });
 
-// Funzione init
+// Init function
 const init = () => {
     setTimeout(() => {
-        getConfuguration(() => { // Prendo la configurazione iniziale
-            initSocket(); // Inizializzo il WebSocket
+        getConfuguration(() => { // Get initial configuration
+            initSocket(); // Initialize WebSocket
             setBusy(false); // Busy off
         }, () => {
-            initSocket(); // Inizializzo il WebSocket
+            initSocket(); // Initialize WebSocket
             setBusy(false); // Busy off
         });
     }, 1000);
 };
 
-// Inizializzo il WebSocket
+// Initialize WebSocket
 const initSocket = () => {
-    const socketUrl = `ws://${window.location.host}/ws`; // URL per connettersi al WebSocket
-    // const socketUrl = `ws://localhost:8080`; // URL per connettersi al WebSocket
-    let socket = new WebSocket(socketUrl); // Oggetto WebSocket
-    socket.onopen = event => { // Apertura connessione
-        console.log("Connessione al WebSocket aperta");
-        showHideLinkIcon(true); // Mostro l'icona di collegamento
+    const socketUrl = `ws://${window.location.host}/ws`; // URL to connect to WebSocket
+    // const socketUrl = `ws://localhost:8080`; // URL to connect to WebSocket
+    let socket = new WebSocket(socketUrl); // WebSocket object
+    socket.onopen = event => { // Connection opening
+        console.log("WebSocket connection opened");
+        showHideLinkIcon(true); // Show connection icon
     };
-    socket.onclose = event => { // Chiusura connessione
-        console.log(`Connessione chiusa, codice errore: ${event.code}, motivo: ${event.reason}`);
-        showHideLinkIcon(false); // Nascondo l'icona di collegamento
+    socket.onclose = event => { // Connection closing
+        console.log(`Connection closed, error code: ${event.code}, reason: ${event.reason}`);
+        showHideLinkIcon(false); // Hide connection icon
     };
-    socket.onerror = error => { // Errore
-        console.log(`Errore WebSocket: ${error.message}`);
+    socket.onerror = error => { // Error
+        console.log(`WebSocket error: ${error.message}`);
     };
-    socket.onmessage = event => { // Evento di ricezione di un messaggio
-        try { // Gestisco l'errore di parsing
-            const json = JSON.parse(event.data); // Faccio il parse della stringa JSON
-            manageSocketMessage(json); // Gestisco il messaggio di risposta
+    socket.onmessage = event => { // Message reception event
+        try { // Handle parsing error
+            const json = JSON.parse(event.data); // Parse JSON string
+            manageSocketMessage(json); // Handle response message
         } catch (error) {
             console.log(error);
         }
     };
 };
 
-// Prendo la configurazione iniziale
+// Get initial configuration
 const getConfuguration = (successCallback, errorCallback) => {
     fetch(`${ESP32IP}/getSettings`).then(response => {
-        return response.json(); // Prendo il JSON
+        return response.json(); // Get JSON
     }).then(data => {
-        $("#settingsResolution").val(data.resolution || "3"); // Imposto risoluzione scansione
-        $("#settingsNormalizzazione").val(data.normalize ? "ON" : "OFF"); // Imposto normalizzazione valori
-        $("#settingsDisplayValues").val(data.displayValues ? "ON" : "OFF"); // Imposto visualizzazione valori
+        $("#settingsResolution").val(data.resolution || "3"); // Set scan resolution
+        $("#settingsNormalizzazione").val(data.normalize ? "ON" : "OFF"); // Set values normalization
+        $("#settingsDisplayValues").val(data.displayValues ? "ON" : "OFF"); // Set values display
         successCallback(); // Success callback
     }).catch(error => {
-        showToast("ERROR", "Errore: impostazioni non caricate"); // Mostro toast
+        showToast("ERROR", "Error: settings not loaded"); // Show toast
         console.log(error);
         errorCallback(); // Error callback
     });
 };
 
-// Salvo le impostazioni
+// Save settings
 const handleSaveSettingsPress = () => {
     setBusy(true); // Busy on
-    const queryString = new URLSearchParams({ // Creo la query string
+    const queryString = new URLSearchParams({ // Create query string
         resolution: $("#settingsResolution").val() || "3",
         normalize: $("#settingsNormalizzazione").val() === "ON",
         displayValues: $("#settingsDisplayValues").val() === "ON"
     }).toString();
     fetch(`${ESP32IP}/setSettings?${queryString}`).then(response => {
-        return response.json(); // Prendo il JSON
+        return response.json(); // Get JSON
     }).then(data => {
         setBusy(false); // Busy off
-        showToast("SUCCESS", "Impostazioni salvate!"); // Mostro toast
+        showToast("SUCCESS", "Settings saved!"); // Show toast
     }).catch(error => {
         setBusy(false); // Busy off
-        showToast("ERROR", "Errore durante il salvataggio"); // Mostro toast
+        showToast("ERROR", "Error during saving"); // Show toast
         console.log(error);
     });
 };
 
-/*********************************** Gestione WebSocket ***********************************/
+/*********************************** WebSocket Management ***********************************/
 
-// Gestisco il messaggio di risposta
+// Handle response message
 manageSocketMessage = data => {
     switch (data.status) {
-        case scanStatus.READY: // L'ESP è in attesa di iniziare una scansione
+        case scanStatus.READY: // ESP is waiting to start a scan
             manageStatusReady(data);
             break;
-        case scanStatus.TUNING: // L'ESP sta eseguendo la calibrazione
+        case scanStatus.TUNING: // ESP is performing calibration
             manageStatusTuning(data);
             break;
-        case scanStatus.SCANNING: // L'ESP sta eseguendo una scansione
+        case scanStatus.SCANNING: // ESP is performing a scan
             manageStatusScanning(data);
             break;
-        case scanStatus.ENDED: // L'ESP ha terminato una scansione
+        case scanStatus.ENDED: // ESP has finished a scan
             manageStatusEnded(data);
             break;
     }
 };
 
-// Gestione dello stato READY
+// Handle READY status
 const manageStatusReady = response => {
-    if (response.status === this.currentStatus) return; // Se è già uguale esco
-    this.currentStatus = response.status || scanStatus.READY; // Aggiorno stato
-    hideEveryContainer(); // Nascondo tutti i container
-    $("#scansionePlaceholder").removeClass("hidden"); // Visualizzo placeholder
-    $("#settingsButton").prop("disabled", false); // Abilito il pulsante impostazioni
-    $("#tableContainer").html(""); // Svuoto tabella
+    if (response.status === this.currentStatus) return; // If already equal exit
+    this.currentStatus = response.status || scanStatus.READY; // Update status
+    hideEveryContainer(); // Hide all containers
+    $("#scansionePlaceholder").removeClass("hidden"); // Show placeholder
+    $("#settingsButton").prop("disabled", false); // Enable settings button
+    $("#tableContainer").html(""); // Empty table
 };
 
-// Gestione dello stato TUNING
+// Handle TUNING status
 const manageStatusTuning = response => {
-    let value = response.data?.toString() || "0"; // Valore di taratura attuale
-    if (value.includes(";")) { // Se contiene la virgola vuol dire che è il valore di riferimento definitivo
-        value = value.split(";")[0]; // Prendo solo il primo valore
-        $("#tuningIcon").addClass("text-success"); // Aggiungo colore verde
-        $("#tuningValue").addClass("text-success"); // Aggiungo colore verde
+    let value = response.data?.toString() || "0"; // Current tuning value
+    if (value.includes(";")) { // If contains semicolon it means it's the final reference value
+        value = value.split(";")[0]; // Take only the first value
+        $("#tuningIcon").addClass("text-success"); // Add green color
+        $("#tuningValue").addClass("text-success"); // Add green color
     } else {
-        $("#tuningIcon").removeClass("text-success"); // Tolgo verde
-        $("#tuningValue").removeClass("text-success"); // Tolgo verde
+        $("#tuningIcon").removeClass("text-success"); // Remove green
+        $("#tuningValue").removeClass("text-success"); // Remove green
     }
 
-    // Imposto valore
-    value = value / taraBobina * 100; // Normalizzo a 100
-    value = value.toFixed(2); // Arrotondo a due cifre decimali
-    $("#tuningValue").text(value); // Imposto valore
-    document.getElementById("sliderCalibrazione").value = value; // Setto il valore sul range
-    if (response.status === this.currentStatus) return; // Se è già uguale esco
-    this.currentStatus = response.status || scanStatus.READY; // Aggiorno stato
-    hideEveryContainer(); // Nascondo tutti i container
-    $("#tuningContainer").removeClass("hidden"); // Visualizzo container
-    $("#settingsButton").prop("disabled", true); // Disabilito il pulsante impostazioni
-    $("#tableContainer").html(""); // Svuoto tabella
+    // Set value
+    value = value / taraBobina * 100; // Normalize to 100
+    value = value.toFixed(2); // Round to two decimal places
+    $("#tuningValue").text(value); // Set value
+    document.getElementById("sliderCalibrazione").value = value; // Set value on range
+    if (response.status === this.currentStatus) return; // If already equal exit
+    this.currentStatus = response.status || scanStatus.READY; // Update status
+    hideEveryContainer(); // Hide all containers
+    $("#tuningContainer").removeClass("hidden"); // Show container
+    $("#settingsButton").prop("disabled", true); // Disable settings button
+    $("#tableContainer").html(""); // Empty table
 };
 
-// Gestione dello stato SCANNING
+// Handle SCANNING status
 const manageStatusScanning = response => {
-    parseCSV(response.data); // Parsing del CSV
-    if (response.status === this.currentStatus) return; // Se è già uguale esco
-    this.currentStatus = response.status || scanStatus.READY; // Aggiorno stato
-    hideEveryContainer(); // Nascondo tutti i container
-    $("#scansioneContainer").removeClass("hidden"); // Visualizzo container
-    $("#recordingLogo").removeClass("hidden"); // Visualizzo logo recording
-    $("#settingsButton").prop("disabled", true); // Disabilito il pulsante impostazioni    
+    parseCSV(response.data); // Parse CSV
+    if (response.status === this.currentStatus) return; // If already equal exit
+    this.currentStatus = response.status || scanStatus.READY; // Update status
+    hideEveryContainer(); // Hide all containers
+    $("#scansioneContainer").removeClass("hidden"); // Show container
+    $("#recordingLogo").removeClass("hidden"); // Show recording logo
+    $("#settingsButton").prop("disabled", true); // Disable settings button    
 };
 
-// Gestione dello stato ENDED
+// Handle ENDED status
 const manageStatusEnded = response => {
-    if (response.status === this.currentStatus) return; // Se è già uguale esco
-    this.currentStatus = response.status || scanStatus.READY; // Aggiorno stato
-    parseCSV(response.data); // Parsing del CSV
-    hideEveryContainer(); // Nascondo tutti i container
-    $("#scansioneContainer").removeClass("hidden"); // Visualizzo container
-    $("#successReadLogo").removeClass("hidden"); // Visualizzo messaggio success
-    $("#settingsButton").prop("disabled", false); // Abilito il pulsante impostazioni
+    if (response.status === this.currentStatus) return; // If already equal exit
+    this.currentStatus = response.status || scanStatus.READY; // Update status
+    parseCSV(response.data); // Parse CSV
+    hideEveryContainer(); // Hide all containers
+    $("#scansioneContainer").removeClass("hidden"); // Show container
+    $("#successReadLogo").removeClass("hidden"); // Show success message
+    $("#settingsButton").prop("disabled", false); // Enable settings button
 };
 
-// Nascondo tutti i container
+// Hide all containers
 const hideEveryContainer = () => {
-    $("#tuningContainer").addClass("hidden"); // Nascondo container
-    $("#scansioneContainer").addClass("hidden"); // Nascondo container scansione
-    $("#scansionePlaceholder").addClass("hidden"); // Nascondo placeholder
-    $("#recordingLogo").addClass("hidden"); // Nascondo logo recording
-    $("#successReadLogo").addClass("hidden"); // Nascondo logo success
+    $("#tuningContainer").addClass("hidden"); // Hide container
+    $("#scansioneContainer").addClass("hidden"); // Hide scan container
+    $("#scansionePlaceholder").addClass("hidden"); // Hide placeholder
+    $("#recordingLogo").addClass("hidden"); // Hide recording logo
+    $("#successReadLogo").addClass("hidden"); // Hide success logo
 };
 
-/*********************************** Creazione della heatmap ***********************************/
+/*********************************** Heatmap Creation ***********************************/
 
-// Faccio il parsing del CSV
+// Parse CSV
 const parseCSV = text => {
     let rows, reference, normalizeMagValues = $("#settingsNormalizzazione").val() === "ON";
     try {
         rows = text.split(";").map(row => row.split(","));
-        reference = parseFloat(rows[0] || 0); // Valore di riferimento
-        rows = rows.filter(item => item.length === 3); // Prendo solo righe valide (Con i 3 valori)
-        if (rows.length === 0) return; // Se vuoto esco
+        reference = parseFloat(rows[0] || 0); // Reference value
+        rows = rows.filter(item => item.length === 3); // Take only valid rows (with 3 values)
+        if (rows.length === 0) return; // If empty exit
     } catch (e) {
-        console.log("Errore durante la pulizia e suddivisione del CSV:", e);
+        console.log("Error during CSV cleaning and splitting:", e);
         return;
     }
 
-    // Calcolo massimi, minimi e differenze da valore di riferimento
+    // Calculate max, min and differences from reference value
     let maxX, maxY, distanceFromReference, leftSeries, rightSeries;
     try {
-        maxX = trovaMassimo(rows.map(item => item[0])); // Trovo valore massimo
-        maxY = trovaMassimo(rows.map(item => item[1])); // trovo valore minimo
+        maxX = trovaMassimo(rows.map(item => item[0])); // Find max value
+        maxY = trovaMassimo(rows.map(item => item[1])); // Find min value
 
-        // Calcolo la differenza con il valore di riferimento
+        // Calculate difference with reference value
         distanceFromReference = rows.map(item => { return { original: parseFloat(item[2]), difference: parseFloat(item[2]) - reference }; });
-        leftSeries = distanceFromReference.filter(item => item.difference < 0); // Minori di 0 => Serie di sinistra (Blu)
-        rightSeries = distanceFromReference.filter(item => item.difference >= 0); // Maggiori di 0 => Serie di destra (Rosso)
+        leftSeries = distanceFromReference.filter(item => item.difference < 0); // Less than 0 => Left series (Blue)
+        rightSeries = distanceFromReference.filter(item => item.difference >= 0); // Greater than 0 => Right series (Red)
     } catch (e) {
-        console.log("Errore durante il calcolo di massimi, minimi e differenze:", e);
+        console.log("Error during calculation of max, min and differences:", e);
         return;
     }
 
-    // Normalizzo le serie e aggiungo differenza valori
+    // Normalize series and add difference values
     try {
-        leftSeries = normalizeSerires(leftSeries); // Normalizzo la serie di sinistra
-        rightSeries = normalizeSerires(rightSeries); // Normalizzo la serie di destra
+        leftSeries = normalizeSerires(leftSeries); // Normalize left series
+        rightSeries = normalizeSerires(rightSeries); // Normalize right series
     } catch (e) {
-        console.log("Errore durante la normalizzazione delle serie:", e);
+        console.log("Error during series normalization:", e);
         return;
     }
 
-    // Creo oggetti classe Rainbow
+    // Create Rainbow class objects
     const rainbowBlue = new Rainbow();
     const rainbowRed = new Rainbow();
     try {
@@ -222,63 +222,63 @@ const parseCSV = text => {
         rainbowRed.setNumberRange(1, normalizeMagValues ? 100 : 10);
         rainbowRed.setSpectrum("white", "red");
     } catch (e) {
-        console.log("Errore durante la creazione degli oggetti Rainbow:", e);
+        console.log("Error during Rainbow objects creation:", e);
     }
 
-    // Ciclo le righe e creo mapping
+    // Loop rows and create mapping
     const dataMap = new Map();
     try {
         rows.forEach(row => {
             const x = parseInt(row[0]);
             const y = parseInt(row[1]);
             let mag = parseFloat(row[2]), absDifferenceValue, color;
-            if (mag < reference) { // Prendo i valori
-                if (normalizeMagValues) // Normalizzato o non
+            if (mag < reference) { // Take values
+                if (normalizeMagValues) // Normalized or not
                     absDifferenceValue = parseInt(leftSeries.filter(item => item.original == mag)[0].absDifferenceNorm) || 0;
                 else
                     absDifferenceValue = parseInt(leftSeries.filter(item => item.original == mag)[0].absDifference) || 0;
-                color = rainbowBlue.colourAt(absDifferenceValue); // Prendo la gradazione giusta
+                color = rainbowBlue.colourAt(absDifferenceValue); // Take correct shade
             } else {
-                if (normalizeMagValues) // Normalizzato o non
+                if (normalizeMagValues) // Normalized or not
                     absDifferenceValue = parseInt(rightSeries.filter(item => item.original == mag)[0].absDifferenceNorm) || 0;
                 else
                     absDifferenceValue = parseInt(rightSeries.filter(item => item.original == mag)[0].absDifference) || 0;
-                color = rainbowRed.colourAt(absDifferenceValue); // Prendo la gradazione giusta
+                color = rainbowRed.colourAt(absDifferenceValue); // Take correct shade
             }
 
-            // Aggiungo a mapping
+            // Add to mapping
             dataMap.set(`${x},${y}`, { color: `#${color}`, mag: mag, absDifferenceValue: absDifferenceValue });
         });
     } catch (e) {
-        console.log("Errore durante la creazione del mapping:", e);
+        console.log("Error during mapping creation:", e);
     }
 
-    // Creo e aggiungo tabella alla view
+    // Create and add table to view
     try {
         let table = createTable(maxX, maxY, dataMap);
         table = fillBlanks(table);
         const tableContainer = document.getElementById("tableContainer");
-        tableContainer.innerHTML = ""; // Pulisco il contenuto esistente
-        tableContainer.appendChild(table); // Aggiungo la nuova tabella
+        tableContainer.innerHTML = ""; // Clear existing content
+        tableContainer.appendChild(table); // Add new table
     } catch (e) {
-        console.log("Errore durante la creazione della tabella:", e);
+        console.log("Error during table creation:", e);
     }
 };
 
-// Normalizzo i valori delle serie
+// Normalize series values
 const normalizeSerires = series => {
-    let absSeries = series.map(item => { return { original: item.original, difference: item.difference, absDifference: Math.abs(item.difference) }; }); // Aggiungo il valore assoluto
+    let absSeries = series.map(item => { return { original: item.original, difference: item.difference, absDifference: Math.abs(item.difference) }; }); // Add absolute value
     const max = trovaMassimo(absSeries.map(item => item.absDifference));
     const min = trovaMinimo(absSeries.map(item => item.absDifference));
     return absSeries.map(item => { return { original: item.original, difference: item.difference, absDifference: item.absDifference, absDifferenceNorm: normalizzaValore(item.absDifference, min, max) }; });
 };
 
-// Creo la tabella
+// Create table
 const createTable = (width, height, dataMap) => {
     const table = document.createElement("table");
     table.style.borderCollapse = "collapse";
 
-    // Ciclo le righe e le colonne, creo le celle e le coloro
+    // Loop rows and columns, create cells and color them
     for (let y = 0; y <= height; y++) {
         const tr = document.createElement("tr");
         for (let x = 0; x <= width; x++) {
@@ -288,10 +288,10 @@ const createTable = (width, height, dataMap) => {
             td.style.height = tableCellHeight;
             const key = `${x},${y}`;
             if (dataMap.has(key)) {
-                td.style.backgroundColor = dataMap.get(key).color; // Prendo colore
-                if ($("#settingsDisplayValues").val() === "ON") { // Se impostazione attiva, aggiungo valori
-                    td.style.color = getContrastColor(td.style.backgroundColor); // Prendo bianco o nero
-                    td.textContent = parseInt(dataMap.get(key).mag); // Prendo il valore
+                td.style.backgroundColor = dataMap.get(key).color; // Take color
+                if ($("#settingsDisplayValues").val() === "ON") { // If setting active, add values
+                    td.style.color = getContrastColor(td.style.backgroundColor); // Take white or black
+                    td.textContent = parseInt(dataMap.get(key).mag); // Take value
                 }
             }
             tr.appendChild(td);
@@ -302,27 +302,27 @@ const createTable = (width, height, dataMap) => {
     return table;
 };
 
-// Normalizzo un valore tra 0 e 100
+// Normalize a value between 0 and 100
 const normalizzaValore = (x, minValue, maxValue) => {
     return ((x - minValue) / (maxValue - minValue)) * 100;
 };
 
-// Trovo il massimo in un array
+// Find max in array
 const trovaMassimo = arr => {
     return arr.length === 0 ? undefined : Math.max(...arr);
 };
 
-// Trovo il minimo in un array
+// Find min in array
 const trovaMinimo = arr => {
     return arr.length === 0 ? undefined : Math.min(...arr);
 };
 
-// Riempio gli spazi bianchi
+// Fill blank spaces
 const fillBlanks = table => {
     const numeroRighe = table.rows.length;
     const numeroColonne = table.rows[0] ? table.rows[0].cells.length : 0;
-    for (let y = 0; y < numeroRighe; y++) { // Ciclo righe
-        for (let x = 0; x < numeroColonne; x++) { // Ciclo colonne
+    for (let y = 0; y < numeroRighe; y++) { // Loop rows
+        for (let x = 0; x < numeroColonne; x++) { // Loop columns
             if (!table.rows[y].cells[x].style.backgroundColor)
                 table.rows[y].cells[x].style.backgroundColor = getColorAverage(x, y, table.rows);
         }
@@ -330,7 +330,7 @@ const fillBlanks = table => {
     return table;
 };
 
-// Calcola la media dei colori intorno alla cella
+// Calculate average of colors around the cell
 const getColorAverage = (x, y, rows) => {
     let r = 0, g = 0, b = 0;
     let count = 0;
@@ -352,33 +352,33 @@ const getColorAverage = (x, y, rows) => {
     if (count > 0) return `rgb(${Math.round(r / count)}, ${Math.round(g / count)}, ${Math.round(b / count)})`;
 };
 
-// Calcola il colore con contrasto elevato
+// Calculate high contrast color
 const getContrastColor = bgColor => {
-    const [r, g, b] = bgColor.match(/\d+/g).map(Number); // Prendo R, G e B
-    const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; // Calcolo la luminosità
-    return luminance > 0.5 ? "#000000" : "#FFFFFF"; // Bianco o nero
+    const [r, g, b] = bgColor.match(/\d+/g).map(Number); // Take R, G and B
+    const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; // Calculate luminance
+    return luminance > 0.5 ? "#000000" : "#FFFFFF"; // White or black
 };
 
 // Busy
 const setBusy = busy => {
-    if (busy) { // Visualizzo busy
+    if (busy) { // Show busy
         $("#fullScreenBusy").removeClass("hidden");
         $("#fullScreenBusy").animate({ opacity: 1 }, 200, "swing");
-    } else { // Nascondo busy
+    } else { // Hide busy
         $("#fullScreenBusy").animate({ opacity: 0 }, 200, "swing", () => {
             $("#fullScreenBusy").addClass("hidden");
         });
     }
 };
 
-// Visualizzo o nascondo icona connessione
+// Show or hide connection icon
 const showHideLinkIcon = connected => {
-    if (connected) { // Mostro icona connessione OK
+    if (connected) { // Show connection OK icon
         $("#linkIconKo").animate({ opacity: 0 }, 200, "swing", () => {
             $("#linkIconOk").removeClass("hidden");
             $("#linkIconOk").animate({ opacity: 1 }, 200, "swing");
         });
-    } else { // Mostro icona connessione KO
+    } else { // Show connection KO icon
         $("#linkIconOk").animate({ opacity: 0 }, 200, "swing", () => {
             $("#linkIconOk").addClass("hidden");
             $("#linkIconKo").animate({ opacity: 1 }, 200, "swing");
@@ -386,15 +386,15 @@ const showHideLinkIcon = connected => {
     }
 };
 
-// Visualizzo il messaggio toast
+// Show toast message
 const showToast = (type, message) => {
-    if (type === "SUCCESS") { // Mostro icona di success
+    if (type === "SUCCESS") { // Show success icon
         $("#messageToastSuccessIcon").removeClass("hidden");
         $("#messageToastErrorIcon").addClass("hidden");
-    } else { // Mostro icona di errore
+    } else { // Show error icon
         $("#messageToastSuccessIcon").addClass("hidden");
         $("#messageToastErrorIcon").removeClass("hidden");
     }
-    $("#messageToastText").text(message); // Imposto il testo
-    $("#messageToast").toast({ delay: 2000 }).toast("show"); // Visualizzo il toast
+    $("#messageToastText").text(message); // Set text
+    $("#messageToast").toast({ delay: 2000 }).toast("show"); // Show toast
 };
