@@ -49,24 +49,21 @@ Screenshots and demo of the web UI and prototype:
 ### 🔍 Scan Example
 <img src="./docs/scan.gif" alt="Scan example" />
 
-### 🎥 Startup Sequence
-<video src="./docs/pushbutton-wall-scanner.mp4" controls width="100%" height="400"></video>
-
 </div>
 
 ---
 
 ## 🛠️ The Project in Detail
 
-This project presents the development of an **innovative device 🆕 for detecting metallic structures 🧲 inside building walls**. The device allows scanning the area of interest and obtaining an **electromagnetic image 📊** of the wall, highlighting the presence and position of any **metallic elements 🔍**.
+This project presents the development of an **innovative device for detecting metallic structures inside building walls**. The device allows scanning the area of interest and obtaining an **electromagnetic image** of the wall, highlighting the presence and position of any **metallic elements**.
 
-The prototype was designed and built entirely 🔧, and is able to connect via **Wi-Fi 📡** to external devices such as **smartphone 📱** or **laptop 💻**. While the device is moved over the area of interest, a real-time scan image is created ⏱️. The device is **portable 🔋** and **lightweight ⚖️**, powered by an **internal battery pack 🔋**, and does not require external wires 🔌. It has a **very simple 😊** and intuitive interface to use, even for non-technical personnel 👷‍♂️, and is compatible with any device capable of displaying a web page 🌐.
+The prototype was designed and built entirely, and is able to connect via **Wi-Fi** to external devices such as **smartphone** or **laptop**. While the device is moved over the area of interest, a real-time scan image is created. The device is **portable** and **lightweight**, powered by an **internal battery pack**, and does not require external wires. It has a **very simple** and intuitive interface to use, even for non-technical personnel, and is compatible with any device capable of displaying a web page.
 
-The device is designed to trace **iron plumbing pipes 🔩**, **copper pipes 🟫** for refrigerants, **reinforced concrete rebars 🏗️** and **other metallic structures** of modest size 📏. It is able to discriminate between **ferromagnetic 🧲** and **non-ferromagnetic 🔩** metals, using different colors for more intuitive visualization 🎨.
+The device is designed to trace **iron plumbing pipes**, **copper pipes** for refrigerants, **reinforced concrete rebars** and **other metallic structures** of modest size. It is able to discriminate between **ferromagnetic** and **non-ferromagnetic** metals, using different colors for more intuitive visualization.
 
-This makes it extremely useful for tracing the presence of **pipes 🔧** to install **nails 📌**, **support pins 🛠️**, **load-bearing structures 🏗️** and **hooks 🪝**, both for personal use 🏠 and for private clientele 🏢. It can also be used by professionals 👨‍🔧 to detect undocumented installations 📋, get a clear idea of the route of old **copper heating pipes** 🟫, or plan new electrical lines ⚡ in **renovations 🏠**.
+This makes it extremely useful for tracing the presence of **pipes** to install **nails**, **support pins**, **load-bearing structures** and **hooks**, both for personal use and for private clientele. It can also be used by professionals to detect undocumented installations, get a clear idea of the route of old **copper heating pipes**, or plan new electrical lines in **renovations**.
 
-During the project development, progress and successes were documented 📝 and are summarized in this repository 🗂️.
+During the project development, progress and successes were documented and are summarized in this repository.
 
 ---
 
